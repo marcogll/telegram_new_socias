@@ -341,3 +341,10 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # ... todo el código del contrato ...
+# Al final:
+onboarding_handler = ConversationHandler(
+    entry_points=[CommandHandler("welcome", start)], # Cambiado a /welcome
+    states=states, # Tu diccionario de estados
+    fallbacks=[CommandHandler("cancelar", cancelar)]
+)

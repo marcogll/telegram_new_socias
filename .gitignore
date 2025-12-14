@@ -1,0 +1,61 @@
+# =========================
+# Secrets & Environment
+# =========================
+.env
+.env.*
+*.env
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# =========================
+# Logs & Runtime
+# =========================
+*.log
+logs/
+*.sqlite
+*.db
+
+# =========================
+# OS & Editors
+# =========================
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains
+.idea/
+
+# =========================
+# Build / Distribution
+# =========================
+build/
+dist/
+*.egg-info/
+
+# =========================
+# Systemd / Deploy Artifacts
+# =========================
+*.service
+*.pid
+
+# =========================
+# Temp / Downloads
+# =========================
+tmp/
+temp/
+downloads/
