@@ -1,6 +1,6 @@
 # 🤖 Vanessa Bot – Asistente de RH para Vanity
 
-Vanessa es un bot de Telegram escrito en Python que automatiza procesos internos de Recursos Humanos en Vanity. Su objetivo es eliminar fricción operativa: onboarding, solicitudes de RH e impresión de documentos, todo orquestado desde Telegram y conectado a flujos de n8n.
+Vanessa es un bot de Telegram escrito en Python que automatiza procesos internos de Recursos Humanos en Vanity. Su objetivo es eliminar fricción operativa: onboarding, solicitudes de RH e impresión de documentos, todo orquestado desde Telegram y conectado a flujos de n8n o servicios de correo.
 
 Este repositorio está pensado como **proyecto Python profesional**, modular y listo para correr 24/7 en producción.
 
@@ -10,12 +10,12 @@ Este repositorio está pensado como **proyecto Python profesional**, modular y l
 
 Vanessa no es un chatbot genérico: es una interfaz conversacional para procesos reales de negocio.
 
-- Onboarding completo de nuevas socias (/welcome)
-- Envío de archivos a impresión (/print)
-- Solicitud de vacaciones (/vacaciones)
-- Solicitud de permisos por horas (/permiso)
+- Onboarding completo de nuevas socias (`/welcome`)
+- Envío de archivos a impresión por correo electrónico (`/print`)
+- Solicitud de vacaciones (`/vacaciones`)
+- Solicitud de permisos por horas (`/permiso`)
 
-Cada flujo es un módulo independiente y todos los datos se envían a **webhooks de n8n** para su procesamiento posterior.
+Cada flujo es un módulo independiente, y los datos se envían a **webhooks de n8n** o se procesan directamente, como en el caso de la impresión.
 
 ---
 
@@ -24,7 +24,8 @@ Cada flujo es un módulo independiente y todos los datos se envían a **webhooks
 ```
 vanity_bot/
 │
-├── .env                  # Variables sensibles (tokens, URLs)
+├── .env                  # Variables sensibles (tokens, URLs, credenciales)
+├── .env.example          # Archivo de ejemplo para variables de entorno
 ├── main.py               # Cerebro principal del bot
 ├── requirements.txt      # Dependencias
 ├── Dockerfile            # Definición del contenedor del bot
@@ -35,7 +36,7 @@ vanity_bot/
     ├── __init__.py
     ├── database.py       # Módulo de conexión a la base de datos
     ├── onboarding.py     # Flujo /welcome (onboarding RH)
-    ├── printer.py        # Flujo /print (impresión)
+    ├── printer.py        # Flujo /print (impresión por email)
     └── rh_requests.py    # /vacaciones y /permiso
 ```
 
@@ -43,23 +44,32 @@ vanity_bot/
 
 ## 🔐 Configuración (.env)
 
-Crea un archivo `.env` en la raíz del proyecto con el siguiente contenido:
+Copia el archivo `.env.example` a `.env` y rellena los valores correspondientes. Este archivo es ignorado por Git para proteger tus credenciales.
 
 ```
 # --- TELEGRAM ---
 TELEGRAM_TOKEN=TU_TOKEN_AQUI
 
 # --- WEBHOOKS N8N ---
-WEBHOOK_ONBOARDING=https://flows.soul23.cloud/webhook/contrato
-WEBHOOK_PRINT=https://flows.soul23.cloud/webhook/impresion
-WEBHOOK_VACACIONES=https://flows.soul23.cloud/webhook/vacaciones
+WEBHOOK_ONBOARDING=https://...
+WEBHOOK_PRINT=https://...
+WEBHOOK_VACACIONES=https://...
 
 # --- DATABASE ---
-# Esta URL es para la conexión interna de Docker, no la modifiques si usas Docker Compose.
-DATABASE_URL=mysql+mysqlconnector://user:password@db:3306/vanessa_logs
-```
+# Usado por el servicio de la base de datos en docker-compose.yml
+MYSQL_DATABASE=vanessa_logs
+MYSQL_USER=user
+MYSQL_PASSWORD=password
+MYSQL_ROOT_PASSWORD=rootpassword
 
-Nunca subas este archivo al repositorio.
+# --- SMTP PARA IMPRESIÓN ---
+# Usado por el módulo de impresión para enviar correos
+SMTP_SERVER=smtp.hostinger.com
+SMTP_PORT=465
+SMTP_USER=tu_email@dominio.com
+SMTP_PASSWORD=tu_password_de_email
+SMTP_RECIPIENT=email_destino@dominio.com
+```
 
 ---
 
@@ -76,7 +86,7 @@ Con el archivo `.env` ya configurado, simplemente ejecuta:
 ```bash
 docker-compose up --build
 ```
-Este comando construirá la imagen del bot, descargará la imagen de MySQL, creará los volúmenes y redes, y lanzará ambos servicios. El bot se conectará automáticamente a la base de datos para registrar los logs.
+Este comando construirá la imagen del bot, descargará la imagen de MySQL, y lanzará ambos servicios. `docker-compose` leerá las variables del archivo `.env` para configurar los contenedores.
 
 ### 3. Detener los servicios
 Para detener los contenedores, presiona `Ctrl+C` en la terminal donde se están ejecutando, o ejecuta desde otro terminal:
@@ -86,40 +96,13 @@ docker-compose down
 
 ---
 
-## 📦 Instalación Manual
-
-Se recomienda usar un entorno virtual.
-
-```
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
----
-
-## ▶️ Ejecución Manual
-
-```
-python main.py
-```
-
-Si el token es válido, verás:
-
-```
-🧠 Vanessa Brain iniciada y escuchando...
-```
-**Nota**: Para que la ejecución manual funcione, necesitarás tener una base de datos MySQL corriendo localmente y accesible en la URL especificada en `DATABASE_URL` dentro de tu archivo `.env`.
-
----
-
 ## 🧩 Arquitectura Interna
 
 ### main.py (El Cerebro)
 - Inicializa el bot de Telegram
 - Carga variables de entorno
 - Registra los handlers de cada módulo
-- Define el menú principal (/start, /help)
+- Define el menú principal (`/start`, `/help`)
 
 ### modules/database.py
 - Gestiona la conexión a la base de datos MySQL con SQLAlchemy.
@@ -127,43 +110,26 @@ Si el token es válido, verás:
 - Provee la función `log_request` para registrar interacciones.
 
 ### modules/onboarding.py
-Flujo conversacional complejo basado en `ConversationHandler`.
-- Recolecta información personal, laboral y de emergencia
-- Normaliza datos (RFC, CURP, fechas)
-- Usa teclados guiados para reducir errores
-- Envía un payload estructurado a n8n
+Flujo conversacional complejo que recolecta datos de nuevas empleadas y los envía a un webhook de n8n.
 
 ### modules/printer.py
-- Recibe documentos o imágenes desde Telegram
-- Obtiene el enlace temporal de Telegram
-- Envía el archivo a una cola de impresión vía webhook
+- Recibe documentos o imágenes desde Telegram.
+- Descarga el archivo de forma segura desde los servidores de Telegram.
+- Se conecta a un servidor SMTP para enviar el archivo como un adjunto por correo electrónico a una dirección predefinida.
 
 ### modules/rh_requests.py
-- Maneja solicitudes simples de RH: Vacaciones y Permisos por horas.
+- Maneja solicitudes simples de RH (Vacaciones y Permisos) y las envía a un webhook de n8n.
 
 ---
 
 ## 🧠 Filosofía del Proyecto
 
-- Telegram como UI
-- Python como cerebro
-- n8n como sistema nervioso
-- Docker para despliegue
-- MySQL para persistencia de logs
-- Datos estructurados, no mensajes sueltos
-- Modularidad total: cada habilidad se enchufa o se quita
-
-Vanessa no reemplaza RH: elimina fricción humana innecesaria.
-
----
-
-## 🚀 Extensiones Futuras
-
-- Firma digital de contratos
-- Finder de documentos
-- Reportes automáticos
-- Roles y permisos
-- Modo administrador
+- **Telegram como UI**: Interfaz conversacional accesible para todos.
+- **Python como cerebro**: Lógica de negocio y orquestación.
+- **Docker para despliegue**: Entornos consistentes y portátiles.
+- **MySQL para persistencia**: Registro auditable de todas las interacciones.
+- **SMTP para acciones directas**: Integración con sistemas estándar como el correo.
+- **Modularidad total**: Cada habilidad es un componente independiente.
 
 ---
 
