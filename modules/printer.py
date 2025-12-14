@@ -2,11 +2,14 @@ import os
 import requests
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler, CommandHandler, MessageHandler, filters
+from modules.database import log_request
 
 # Estado
 ESPERANDO_ARCHIVO = 1
 
 async def start_print(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.effective_user
+    log_request(user.id, user.username, "print", update.message.text)
     await update.message.reply_text("🖨️ **Servicio de Impresión**\n\nPor favor, envíame el archivo (PDF, DOCX o Imagen) que deseas imprimir/enviar.")
     return ESPERANDO_ARCHIVO
 

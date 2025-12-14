@@ -2,15 +2,20 @@ import os
 import requests
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, ConversationHandler, CommandHandler, MessageHandler, filters
+from modules.database import log_request
 
 TIPO_SOLICITUD, FECHAS, MOTIVO = range(3)
 
 async def start_vacaciones(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.effective_user
+    log_request(user.id, user.username, "vacaciones", update.message.text)
     context.user_data['tipo'] = 'Vacaciones'
     await update.message.reply_text("🌴 **Solicitud de Vacaciones**\n\n¿Para qué fechas las necesitas? (Ej: 10 al 15 de Octubre)")
     return FECHAS
 
 async def start_permiso(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.effective_user
+    log_request(user.id, user.username, "permiso", update.message.text)
     context.user_data['tipo'] = 'Permiso Especial'
     await update.message.reply_text("⏱️ **Solicitud de Permiso**\n\n¿Para qué día y horario lo necesitas?")
     return FECHAS

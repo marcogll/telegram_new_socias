@@ -17,6 +17,8 @@ from telegram.ext import (
     Defaults,
 )
 
+from modules.database import log_request
+
 # --- 1. CARGA DE ENTORNO ---
 load_dotenv()  # Carga las variables del archivo .env
 TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -115,6 +117,7 @@ TECLADO_RELACION_EMERGENCIA = ReplyKeyboardMarkup(
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
     context.user_data.clear()
+    log_request(user.id, user.username, "welcome", update.message.text)
     
     context.user_data["metadata"] = {
         "telegram_id": user.id,
