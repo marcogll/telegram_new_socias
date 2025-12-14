@@ -9,6 +9,7 @@ from telegram.ext import Application, Defaults, CommandHandler, ContextTypes
 from modules.onboarding import onboarding_handler
 from modules.printer import print_handler
 from modules.rh_requests import vacaciones_handler, permiso_handler
+from modules.database import log_request
 # from modules.finder import finder_handler (Si lo creas después)
 
 load_dotenv()
@@ -18,6 +19,8 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 async def menu_principal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Muestra el menú de opciones de Vanessa"""
+    user = update.effective_user
+    log_request(user.id, user.username, "start", update.message.text)
     texto = (
         "👩‍💼 **Hola, soy Vanessa. ¿En qué puedo ayudarte hoy?**\n\n"
         "📝 `/welcome` - Iniciar onboarding/contrato\n"

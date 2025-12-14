@@ -27,10 +27,13 @@ vanity_bot/
 ├── .env                  # Variables sensibles (tokens, URLs)
 ├── main.py               # Cerebro principal del bot
 ├── requirements.txt      # Dependencias
+├── Dockerfile            # Definición del contenedor del bot
+├── docker-compose.yml    # Orquestación de servicios (bot + db)
 ├── README.md             # Este documento
 │
 └── modules/              # Habilidades del bot
     ├── __init__.py
+    ├── database.py       # Módulo de conexión a la base de datos
     ├── onboarding.py     # Flujo /welcome (onboarding RH)
     ├── printer.py        # Flujo /print (impresión)
     └── rh_requests.py    # /vacaciones y /permiso
@@ -50,13 +53,40 @@ TELEGRAM_TOKEN=TU_TOKEN_AQUI
 WEBHOOK_ONBOARDING=https://flows.soul23.cloud/webhook/contrato
 WEBHOOK_PRINT=https://flows.soul23.cloud/webhook/impresion
 WEBHOOK_VACACIONES=https://flows.soul23.cloud/webhook/vacaciones
+
+# --- DATABASE ---
+# Esta URL es para la conexión interna de Docker, no la modifiques si usas Docker Compose.
+DATABASE_URL=mysql+mysqlconnector://user:password@db:3306/vanessa_logs
 ```
 
 Nunca subas este archivo al repositorio.
 
 ---
 
-## 📦 Instalación
+## 🐳 Ejecución con Docker (Recomendado)
+
+El proyecto está dockerizado para facilitar su despliegue.
+
+### 1. Pre-requisitos
+- Docker
+- Docker Compose
+
+### 2. Levantar los servicios
+Con el archivo `.env` ya configurado, simplemente ejecuta:
+```bash
+docker-compose up --build
+```
+Este comando construirá la imagen del bot, descargará la imagen de MySQL, creará los volúmenes y redes, y lanzará ambos servicios. El bot se conectará automáticamente a la base de datos para registrar los logs.
+
+### 3. Detener los servicios
+Para detener los contenedores, presiona `Ctrl+C` en la terminal donde se están ejecutando, o ejecuta desde otro terminal:
+```bash
+docker-compose down
+```
+
+---
+
+## 📦 Instalación Manual
 
 Se recomienda usar un entorno virtual.
 
@@ -79,82 +109,37 @@ Si el token es válido, verás:
 ```
 🧠 Vanessa Brain iniciada y escuchando...
 ```
+**Nota**: Para que la ejecución manual funcione, necesitarás tener una base de datos MySQL corriendo localmente y accesible en la URL especificada en `DATABASE_URL` dentro de tu archivo `.env`.
 
 ---
 
 ## 🧩 Arquitectura Interna
 
 ### main.py (El Cerebro)
-
 - Inicializa el bot de Telegram
 - Carga variables de entorno
 - Registra los handlers de cada módulo
 - Define el menú principal (/start, /help)
 
-Nada de lógica de negocio vive aquí. Solo coordinación.
-
----
+### modules/database.py
+- Gestiona la conexión a la base de datos MySQL con SQLAlchemy.
+- Define el modelo `RequestLog` para la tabla de logs.
+- Provee la función `log_request` para registrar interacciones.
 
 ### modules/onboarding.py
-
 Flujo conversacional complejo basado en `ConversationHandler`.
-
 - Recolecta información personal, laboral y de emergencia
 - Normaliza datos (RFC, CURP, fechas)
 - Usa teclados guiados para reducir errores
 - Envía un payload estructurado a n8n
 
-El diseño es **estado → pregunta → respuesta → siguiente estado**.
-
----
-
 ### modules/printer.py
-
 - Recibe documentos o imágenes desde Telegram
 - Obtiene el enlace temporal de Telegram
 - Envía el archivo a una cola de impresión vía webhook
 
-Telegram se usa como interfaz, n8n como backend operativo.
-
----
-
 ### modules/rh_requests.py
-
-- Maneja solicitudes simples de RH
-- Vacaciones
-- Permisos por horas
-
-El bot solo valida y recopila; la lógica de aprobación vive fuera.
-
----
-
-## ⚙️ Ejecución Automática con systemd (Linux)
-
-Ejemplo de servicio:
-
-```
-[Unit]
-Description=Vanessa Bot
-After=network.target
-
-[Service]
-User=vanity
-WorkingDirectory=/opt/vanity_bot
-EnvironmentFile=/opt/vanity_bot/.env
-ExecStart=/opt/vanity_bot/venv/bin/python main.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Luego:
-
-```
-sudo systemctl daemon-reload
-sudo systemctl enable vanessa
-sudo systemctl start vanessa
-```
+- Maneja solicitudes simples de RH: Vacaciones y Permisos por horas.
 
 ---
 
@@ -163,6 +148,8 @@ sudo systemctl start vanessa
 - Telegram como UI
 - Python como cerebro
 - n8n como sistema nervioso
+- Docker para despliegue
+- MySQL para persistencia de logs
 - Datos estructurados, no mensajes sueltos
 - Modularidad total: cada habilidad se enchufa o se quita
 

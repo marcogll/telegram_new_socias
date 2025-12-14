@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: vanessa_bot
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=mysql+mysqlconnector://user:password@db:3306/vanessa_logs
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+
+  db:
+    image: mysql:8.0
+    container_name: vanessa_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: vanessa_logs
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: rootpassword
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+volumes:
+  mysql_data:

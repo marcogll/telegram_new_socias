@@ -1,0 +1,5 @@
+python-telegram-bot
+python-dotenv
+requests
+SQLAlchemy
+mysql-connector-python
