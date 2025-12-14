@@ -1,8 +1,20 @@
 import os
 import requests
+import smtplib
+import ssl
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler, CommandHandler, MessageHandler, filters
 from modules.database import log_request
+
+# --- SMTP Configuration ---
+SMTP_SERVER = os.getenv("SMTP_SERVER")
+SMTP_PORT = int(os.getenv("SMTP_PORT", 465))
+SMTP_USER = os.getenv("SMTP_USER")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+SMTP_RECIPIENT = os.getenv("SMTP_RECIPIENT")
 
 # Estado
 ESPERANDO_ARCHIVO = 1
@@ -20,25 +32,48 @@ async def recibir_archivo(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     file_id = archivo.file_id
     file_name = getattr(archivo, 'file_name', f"foto_{file_id}.jpg")
     
-    # Obtenemos el link de descarga directo de Telegram
-    file_info = await context.bot.get_file(file_id)
-    file_url = file_info.file_path
+    await update.message.reply_text(f"Procesando *{file_name}*... un momento por favor.")
 
-    # Enviamos a n8n
-    webhook = os.getenv("WEBHOOK_PRINT")
-    payload = {
-        "user": user.full_name,
-        "email_user": f"{user.username}@telegram.org", # O pedir el mail antes
-        "file_url": file_url,
-        "file_name": file_name,
-        "tipo": "impresion"
-    }
-    
     try:
-        requests.post(webhook, json=payload)
-        await update.message.reply_text(f"✅ Archivo *{file_name}* enviado a cola de impresión.")
-    except:
-        await update.message.reply_text("❌ Error al conectar con el servidor de impresión.")
+        # 1. Descargar el archivo de Telegram
+        file_info = await context.bot.get_file(file_id)
+        file_url = file_info.file_path
+        file_content = requests.get(file_url).content
+
+        # 2. Construir el correo
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USER
+        msg['To'] = SMTP_RECIPIENT
+        msg['Subject'] = f"Nuevo archivo para imprimir de {user.full_name}"
+
+        # Cuerpo del correo
+        body = f"""
+        Hola,
+
+        El usuario {user.full_name} (Username: @{user.username}, ID: {user.id}) ha enviado un archivo para imprimir.
+
+        Nombre del archivo: {file_name}
+
+        Este correo ha sido generado automáticamente por Vanessa Bot.
+        """
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Adjuntar el archivo
+        attachment = MIMEApplication(file_content, Name=file_name)
+        attachment['Content-Disposition'] = f'attachment; filename="{file_name}"'
+        msg.attach(attachment)
+
+        # 3. Enviar el correo
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context) as server:
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_USER, SMTP_RECIPIENT, msg.as_string())
+
+        await update.message.reply_text(f"✅ Archivo *{file_name}* enviado a la impresora correctamente.")
+
+    except Exception as e:
+        print(f"Error al enviar correo: {e}") # Log para el admin
+        await update.message.reply_text("❌ Hubo un error al procesar tu archivo. Por favor, contacta a un administrador.")
 
     return ConversationHandler.END
 
