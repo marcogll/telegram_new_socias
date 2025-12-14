@@ -1,6 +1,10 @@
 import os
 import logging
 from dotenv import load_dotenv
+
+# Cargar variables de entorno antes de importar módulos que las usan
+load_dotenv()
+
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, Defaults, CommandHandler, ContextTypes
@@ -12,7 +16,7 @@ from modules.rh_requests import vacaciones_handler, permiso_handler
 from modules.database import log_request
 # from modules.finder import finder_handler (Si lo creas después)
 
-load_dotenv()
+
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
