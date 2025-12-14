@@ -32,12 +32,12 @@ logging.basicConfig(
 )
 
 # Convertimos la string del webhook en una lista (por si en el futuro hay varios separados por coma)
-# Se aceptan los nombres WEBHOOK_CONTRATO (nuevo) y WEBHOOK_ONBOARDING (legacy).
-_webhook_raw = os.getenv("WEBHOOK_CONTRATO") or os.getenv("WEBHOOK_ONBOARDING") or ""
+# Se aceptan los nombres WEBHOOK_ONBOARDING (principal) y WEBHOOK_CONTRATO (alias).
+_webhook_raw = os.getenv("WEBHOOK_ONBOARDING") or os.getenv("WEBHOOK_CONTRATO") or ""
 WEBHOOK_URLS = [w.strip() for w in _webhook_raw.split(",") if w.strip()]
 
 if not WEBHOOK_URLS:
-    logging.warning("No se configuró WEBHOOK_CONTRATO/WEBHOOK_ONBOARDING; el onboarding no enviará datos.")
+    logging.warning("No se configuró WEBHOOK_ONBOARDING (o alias WEBHOOK_CONTRATO); el onboarding no enviará datos.")
 
 # --- 2. ESTADOS DEL FLUJO ---
 (
@@ -63,7 +63,8 @@ def normalizar_id(texto: str) -> str:
     return "N/A" if limpio == "0" else limpio
 
 def limpiar_texto_general(texto: str) -> str:
-    t = texto.strip()
+    # Colapsa espacios múltiples que deja el autocorrector y recorta extremos
+    t = " ".join(texto.split())
     return "N/A" if t == "0" else t
 
 # --- 4. TECLADOS DINÁMICOS ---

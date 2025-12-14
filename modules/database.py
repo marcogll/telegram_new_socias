@@ -39,6 +39,13 @@ def _build_engine():
         logging.error(f"No se pudo crear el engine de base de datos: {exc}")
         return None
 
+def _disable_db_logging(reason: str):
+    """Deshabilita el logging a DB después de un error para evitar spam."""
+    global engine, SessionLocal
+    engine = None
+    SessionLocal = None
+    logging.warning(f"DB logging deshabilitado: {reason}")
+
 # Crear el engine y sesión si es posible
 engine = _build_engine()
 metadata = MetaData() if engine else None
@@ -46,6 +53,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine) if e
 
 # Función para inicializar la base de datos
 def init_db():
+    global engine, SessionLocal
     if not engine:
         return
     try:
@@ -54,6 +62,7 @@ def init_db():
         logging.info("Tablas verificadas/creadas correctamente.")
     except Exception as e:
         logging.error(f"Error al inicializar la base de datos: {e}")
+        _disable_db_logging("no se pudo inicializar la base de datos (se omitirán logs).")
         # No propagamos para que el bot pueda seguir levantando aunque no haya DB
 
 # Función para registrar una solicitud en la base de datos
@@ -62,7 +71,12 @@ def log_request(telegram_id, username, command, message):
         logging.debug("Log de DB omitido (DB no configurada).")
         return
 
-    db_session = SessionLocal()
+    try:
+        db_session = SessionLocal()
+    except Exception as exc:
+        logging.error(f"No se pudo crear sesión DB, se deshabilita el log: {exc}")
+        _disable_db_logging("no se pudo abrir sesión")
+        return
     try:
         log_entry = RequestLog(
             telegram_id=str(telegram_id),

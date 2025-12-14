@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 # Cargar variables de entorno antes de importar módulos que las usan
 load_dotenv()
 
-from telegram import Update
+from telegram import Update, ReplyKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.ext import Application, Defaults, CommandHandler, ContextTypes
 
@@ -27,13 +27,13 @@ async def menu_principal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_request(user.id, user.username, "start", update.message.text)
     texto = (
         "👩‍💼 **Hola, soy Vanessa. ¿En qué puedo ayudarte hoy?**\n\n"
-        "📝 `/welcome` - Iniciar onboarding/contrato\n"
-        "🖨️ `/print` - Imprimir o enviar archivo\n"
-        "🌴 `/vacaciones` - Solicitar días libres\n"
-        "⏱️ `/permiso` - Solicitar permiso por horas\n\n"
-        "Selecciona un comando para empezar."
+        "Toca un comando en azul para lanzarlo rápido:"
     )
-    await update.message.reply_text(texto)
+    teclado = ReplyKeyboardMarkup(
+        [["/welcome", "/print"], ["/vacaciones", "/permiso"]],
+        resize_keyboard=True
+    )
+    await update.message.reply_text(texto, reply_markup=teclado)
 
 def main():
     # Configuración Global

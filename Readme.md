@@ -51,7 +51,7 @@ Copia el archivo `.env.example` a `.env` y rellena los valores correspondientes.
 TELEGRAM_TOKEN=TU_TOKEN_AQUI
 
 # --- WEBHOOKS N8N ---
-WEBHOOK_CONTRATO=https://...   # También acepta WEBHOOK_ONBOARDING
+WEBHOOK_ONBOARDING=https://...   # Alias aceptado: WEBHOOK_CONTRATO
 WEBHOOK_PRINT=https://...
 WEBHOOK_VACACIONES=https://...
 
