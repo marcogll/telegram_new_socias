@@ -3,12 +3,37 @@ import re
 import requests
 import uuid
 from datetime import datetime, date
-from telegram import Update
-from telegram.ext import ContextTypes, ConversationHandler, CommandHandler, MessageHandler, filters
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
+from telegram.ext import CommandHandler, ContextTypes, ConversationHandler, MessageHandler, filters
 from modules.database import log_request
 from modules.ai import classify_reason
 
+# Helpers de webhooks
+def _get_webhook_list(env_name: str) -> list:
+    raw = os.getenv(env_name, "")
+    return [w.strip() for w in raw.split(",") if w.strip()]
+
+def _send_webhooks(urls: list, payload: dict):
+    enviados = 0
+    for url in urls:
+        try:
+            res = requests.post(url, json=payload, timeout=15)
+            res.raise_for_status()
+            enviados += 1
+        except Exception as e:
+            print(f"[webhook] Error enviando a {url}: {e}")
+    return enviados
+
 TIPO_SOLICITITUD, FECHAS, MOTIVO = range(3)
+
+# Teclados de apoyo
+MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+TECLADO_MESES = ReplyKeyboardMarkup([MESES[i:i+3] for i in range(0, 12, 3)], one_time_keyboard=True, resize_keyboard=True)
+TECLADO_PERMISO_RAPIDO = ReplyKeyboardMarkup(
+    [["Hoy 09:00-11:00", "Hoy 15:00-18:00"], ["Mañana 09:00-11:00", "Mañana 15:00-18:00"], ["Otra fecha/horario"]],
+    one_time_keyboard=True,
+    resize_keyboard=True,
+)
 
 def _calculate_vacation_metrics(date_string: str) -> dict:
     """
@@ -57,19 +82,39 @@ async def start_vacaciones(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     user = update.effective_user
     log_request(user.id, user.username, "vacaciones", update.message.text)
     context.user_data['tipo'] = 'VACACIONES'
-    await update.message.reply_text("🌴 **Solicitud de Vacaciones**\n\n¿Para qué fechas las necesitas? (Ej: 10 al 15 de Octubre)")
+    await update.message.reply_text(
+        "🌴 **Solicitud de Vacaciones**\n\n¿Para qué fechas las necesitas?\nUsa el formato: `10 al 15 de Octubre`.",
+        reply_markup=TECLADO_MESES,
+    )
     return FECHAS
 
 async def start_permiso(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
     log_request(user.id, user.username, "permiso", update.message.text)
     context.user_data['tipo'] = 'PERMISO'
-    await update.message.reply_text("⏱️ **Solicitud de Permiso**\n\n¿Para qué día y horario lo necesitas?")
+    await update.message.reply_text(
+        "⏱️ **Solicitud de Permiso**\n\nSelecciona o escribe el día y horario. Ej: `Jueves 15 09:00-11:00`.",
+        reply_markup=TECLADO_PERMISO_RAPIDO,
+    )
     return FECHAS
 
 async def recibir_fechas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    context.user_data['fechas'] = update.message.text
-    await update.message.reply_text("Entendido. ¿Cuál es el motivo o comentario adicional?")
+    texto_fechas = update.message.text
+    es_vacaciones = context.user_data.get('tipo') == 'VACACIONES'
+
+    if es_vacaciones:
+        metrics = _calculate_vacation_metrics(texto_fechas)
+        if metrics["dias_totales"] == 0:
+            await update.message.reply_text(
+                "No entendí las fechas. Usa un formato como `10 al 15 de Octubre`.",
+                reply_markup=TECLADO_MESES,
+            )
+            return FECHAS
+        # Si se entiende, guardamos también las métricas preliminares
+        context.user_data['metricas_preliminares'] = metrics
+
+    context.user_data['fechas'] = texto_fechas
+    await update.message.reply_text("Entendido. ¿Cuál es el motivo o comentario adicional?", reply_markup=ReplyKeyboardRemove())
     return MOTIVO
 
 async def recibir_motivo_fin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -82,7 +127,8 @@ async def recibir_motivo_fin(update: Update, context: ContextTypes.DEFAULT_TYPE)
         "record_id": str(uuid.uuid4()),
         "solicitante": {
             "id_telegram": user.id,
-            "nombre": user.full_name
+            "nombre": user.full_name,
+            "username": user.username
         },
         "tipo_solicitud": datos['tipo'],
         "fechas_texto_original": datos['fechas'],
@@ -90,15 +136,16 @@ async def recibir_motivo_fin(update: Update, context: ContextTypes.DEFAULT_TYPE)
         "created_at": datetime.now().isoformat()
     }
 
+    webhooks = []
     if datos['tipo'] == 'PERMISO':
-        webhook = os.getenv("WEBHOOK_PERMISOS")
+        webhooks = _get_webhook_list("WEBHOOK_PERMISOS")
         categoria = classify_reason(motivo)
         payload["categoria_detectada"] = categoria
         await update.message.reply_text(f"Categoría detectada → **{categoria}** 🚨")
     
     elif datos['tipo'] == 'VACACIONES':
-        webhook = os.getenv("WEBHOOK_VACACIONES")
-        metrics = _calculate_vacation_metrics(datos['fechas'])
+        webhooks = _get_webhook_list("WEBHOOK_VACACIONES")
+        metrics = datos.get('metricas_preliminares') or _calculate_vacation_metrics(datos['fechas'])
         
         if metrics["dias_totales"] > 0:
             payload["metricas"] = metrics
@@ -122,10 +169,12 @@ async def recibir_motivo_fin(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await update.message.reply_text("🤔 No entendí las fechas. Por favor, usa un formato como '10 al 15 de Octubre'.")
 
     try:
-        if webhook:
-            requests.post(webhook, json=payload)
-            tipo_solicitud_texto = "Permiso" if datos['tipo'] == 'PERMISO' else 'Vacaciones'
+        enviados = _send_webhooks(webhooks, payload) if webhooks else 0
+        tipo_solicitud_texto = "Permiso" if datos['tipo'] == 'PERMISO' else 'Vacaciones'
+        if enviados > 0:
             await update.message.reply_text(f"✅ Solicitud de *{tipo_solicitud_texto}* enviada a tu Manager.")
+        else:
+            await update.message.reply_text("⚠️ No hay webhook configurado o falló el envío. RH lo revisará.")
     except Exception as e:
         print(f"Error enviando webhook: {e}")
         await update.message.reply_text("⚠️ Error enviando la solicitud.")
@@ -140,12 +189,18 @@ async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 # Handlers separados pero comparten lógica
 vacaciones_handler = ConversationHandler(
     entry_points=[CommandHandler("vacaciones", start_vacaciones)],
-    states={FECHAS: [MessageHandler(filters.TEXT, recibir_fechas)], MOTIVO: [MessageHandler(filters.TEXT, recibir_motivo_fin)]},
+    states={
+        FECHAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_fechas)],
+        MOTIVO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_motivo_fin)]
+    },
     fallbacks=[CommandHandler("cancelar", cancelar)]
 )
 
 permiso_handler = ConversationHandler(
     entry_points=[CommandHandler("permiso", start_permiso)],
-    states={FECHAS: [MessageHandler(filters.TEXT, recibir_fechas)], MOTIVO: [MessageHandler(filters.TEXT, recibir_motivo_fin)]},
+    states={
+        FECHAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_fechas)],
+        MOTIVO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_motivo_fin)]
+    },
     fallbacks=[CommandHandler("cancelar", cancelar)]
 )

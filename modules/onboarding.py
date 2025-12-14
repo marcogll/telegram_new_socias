@@ -22,8 +22,6 @@ from modules.database import log_request
 # --- 1. CARGA DE ENTORNO ---
 load_dotenv()  # Carga las variables del archivo .env
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-# Convertimos la string del webhook en una lista (por si en el futuro hay varios separados por coma)
-WEBHOOK_URLS = os.getenv("WEBHOOK_CONTRATO", "").split(",")
 
 # Validación de seguridad
 if not TOKEN:
@@ -32,6 +30,14 @@ if not TOKEN:
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
+
+# Convertimos la string del webhook en una lista (por si en el futuro hay varios separados por coma)
+# Se aceptan los nombres WEBHOOK_CONTRATO (nuevo) y WEBHOOK_ONBOARDING (legacy).
+_webhook_raw = os.getenv("WEBHOOK_CONTRATO") or os.getenv("WEBHOOK_ONBOARDING") or ""
+WEBHOOK_URLS = [w.strip() for w in _webhook_raw.split(",") if w.strip()]
+
+if not WEBHOOK_URLS:
+    logging.warning("No se configuró WEBHOOK_CONTRATO/WEBHOOK_ONBOARDING; el onboarding no enviará datos.")
 
 # --- 2. ESTADOS DEL FLUJO ---
 (
@@ -162,7 +168,7 @@ async def manejar_flujo(update: Update, context: ContextTypes.DEFAULT_TYPE, esta
     siguiente_estado = estado_actual + 1
     
     preguntas = {
-        NOMBRE_SALUDO: "¡Lindo nombre! ✨\n\nNecesito tus datos oficiales para el contrato.\n¿Cuál es tu *nombre completo* (nombres) tal cual aparece en tu INE?",
+        NOMBRE_SALUDO: "¡Lindo nombre! ✨\n\nNecesito tus datos oficiales para el contrato.\n¿Cuáles son tus *nombres* (sin apellidos) tal cual aparecen en tu INE?",
         NOMBRE_COMPLETO: "¿Cuál es tu *apellido paterno*?",
         APELLIDO_PATERNO: "¿Y tu *apellido materno*?",
         
@@ -290,16 +296,18 @@ async def finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     headers = {"Content-Type": "application/json", "User-Agent": "Welcome2Soul-Bot"}
     
+    urls_a_enviar = WEBHOOK_URLS
     enviado = False
-    for url in WEBHOOK_URLS:
-        if not url: continue
+    for url in urls_a_enviar:
+        if not url:
+            continue
         try:
             res = requests.post(url.strip(), json=payload, headers=headers, timeout=20)
             res.raise_for_status()
             enviado = True
             logging.info(f"Webhook enviado exitosamente a: {url}")
         except Exception as e:
-            logging.error(f"Error enviando webhook: {e}")
+            logging.error(f"Error enviando webhook a {url}: {e}")
 
     if enviado:
         await update.message.reply_text(

@@ -51,7 +51,7 @@ Copia el archivo `.env.example` a `.env` y rellena los valores correspondientes.
 TELEGRAM_TOKEN=TU_TOKEN_AQUI
 
 # --- WEBHOOKS N8N ---
-WEBHOOK_ONBOARDING=https://...
+WEBHOOK_CONTRATO=https://...   # También acepta WEBHOOK_ONBOARDING
 WEBHOOK_PRINT=https://...
 WEBHOOK_VACACIONES=https://...
 
@@ -68,7 +68,7 @@ SMTP_SERVER=smtp.hostinger.com
 SMTP_PORT=465
 SMTP_USER=tu_email@dominio.com
 SMTP_PASSWORD=tu_password_de_email
-SMTP_RECIPIENT=email_destino@dominio.com
+SMTP_RECIPIENT=email_destino@dominio.com  # También puedes usar PRINTER_EMAIL
 ```
 
 ---

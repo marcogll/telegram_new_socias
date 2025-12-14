@@ -9,12 +9,16 @@ from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler, CommandHandler, MessageHandler, filters
 from modules.database import log_request
 
+# Webhook opcional para notificar el evento de impresión
+WEBHOOK_PRINTS = [w.strip() for w in (os.getenv("WEBHOOK_PRINT", "")).split(",") if w.strip()]
+
 # --- SMTP Configuration ---
 SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 465))
 SMTP_USER = os.getenv("SMTP_USER")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-SMTP_RECIPIENT = os.getenv("SMTP_RECIPIENT")
+# Permitimos PRINTER_EMAIL como alias legado para SMTP_RECIPIENT
+SMTP_RECIPIENT = os.getenv("SMTP_RECIPIENT") or os.getenv("PRINTER_EMAIL")
 
 # Estado
 ESPERANDO_ARCHIVO = 1
@@ -35,6 +39,9 @@ async def recibir_archivo(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await update.message.reply_text(f"Procesando *{file_name}*... un momento por favor.")
 
     try:
+        if not all([SMTP_SERVER, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_RECIPIENT]):
+            raise RuntimeError("SMTP no configurado (falta SERVER/USER/PASSWORD/RECIPIENT).")
+        
         # 1. Descargar el archivo de Telegram
         file_info = await context.bot.get_file(file_id)
         file_url = file_info.file_path
@@ -74,7 +81,29 @@ async def recibir_archivo(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     except Exception as e:
         print(f"Error al enviar correo: {e}") # Log para el admin
         await update.message.reply_text("❌ Hubo un error al procesar tu archivo. Por favor, contacta a un administrador.")
+        return ConversationHandler.END
 
+    # Webhook de notificación (sin archivo, solo metadata)
+    if WEBHOOK_PRINTS:
+        payload = {
+            "accion": "PRINT",
+            "usuario": {
+                "id": user.id,
+                "username": user.username,
+                "nombre": user.full_name
+            },
+            "archivo": {
+                "nombre": file_name,
+                "telegram_file_id": file_id,
+            },
+            "enviado_via": "email",
+            "timestamp": update.message.date.isoformat() if update.message.date else None
+        }
+        for url in WEBHOOK_PRINTS:
+            try:
+                requests.post(url, json=payload, timeout=10).raise_for_status()
+            except Exception as e:
+                print(f"Error notificando webhook de impresión a {url}: {e}")
     return ConversationHandler.END
 
 async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
