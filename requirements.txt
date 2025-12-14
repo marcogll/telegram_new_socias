@@ -3,3 +3,4 @@ python-dotenv
 requests
 SQLAlchemy
 mysql-connector-python
+google-generativeai

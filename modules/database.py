@@ -8,12 +8,21 @@ import logging
 # Configuración de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-# Obtener la URL de la base de datos desde las variables de entorno
-DATABASE_URL = os.getenv("DATABASE_URL", "mysql+mysqlconnector://user:password@db:3306/vanessa_logs")
+# Construir la URL de la base de datos desde las variables de entorno individuales
+try:
+    user = os.getenv("MYSQL_USER")
+    password = os.getenv("MYSQL_PASSWORD")
+    host = "db"  # El nombre del servicio de la base de datos en docker-compose
+    database = os.getenv("MYSQL_DATABASE")
+    DATABASE_URL = f"mysql+mysqlconnector://{user}:{password}@{host}:3306/{database}"
+    
+    # Crear el motor de la base de datos
+    engine = create_engine(DATABASE_URL)
+    metadata = MetaData()
 
-# Crear el motor de la base de datos
-engine = create_engine(DATABASE_URL)
-metadata = MetaData()
+except AttributeError:
+    logging.error("Error: Faltan una o más variables de entorno para la base de datos (MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE).")
+    exit(1)
 
 # Base para los modelos declarativos
 Base = declarative_base()
