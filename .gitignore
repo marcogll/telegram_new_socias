@@ -1,5 +1,7 @@
 # Environments
 .env
+.env.bak
+.venv/
 venv/
 .idea/
 

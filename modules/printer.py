@@ -64,8 +64,8 @@ async def recibir_archivo(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         msg.attach(attachment)
 
         # 3. Enviar el correo
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context) as server:
+        ssl_context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=ssl_context) as server:
             server.login(SMTP_USER, SMTP_PASSWORD)
             server.sendmail(SMTP_USER, SMTP_RECIPIENT, msg.as_string())
 

@@ -321,11 +321,24 @@ async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
     return ConversationHandler.END
 
+## Definición de estados para el ConversationHandler
+states = {}
+for i in range(34):
+    callback = partial(manejar_flujo, estado_actual=i)
+    states[i] = [MessageHandler(filters.TEXT & ~filters.COMMAND, callback)]
+
+states[34] = [MessageHandler(filters.TEXT & ~filters.COMMAND, finalizar)]
+
+# Handler listo para importar en main.py
+onboarding_handler = ConversationHandler(
+    entry_points=[CommandHandler("welcome", start)], # Cambiado a /welcome
+    states=states, # Tu diccionario de estados
+    fallbacks=[CommandHandler("cancelar", cancelar)]
+)
+
 def main():
     defaults = Defaults(parse_mode=ParseMode.MARKDOWN)
     application = Application.builder().token(TOKEN).defaults(defaults).build()
-    
-    # states definition moved to global scope
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("contrato", start)],
@@ -339,19 +352,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-# ... todo el código del contrato ...
-
-# Definición de estados para el ConversationHandler
-states = {}
-for i in range(34):
-    callback = partial(manejar_flujo, estado_actual=i)
-    states[i] = [MessageHandler(filters.TEXT & ~filters.COMMAND, callback)]
-
-states[34] = [MessageHandler(filters.TEXT & ~filters.COMMAND, finalizar)]
-
-# Al final:
-onboarding_handler = ConversationHandler(
-    entry_points=[CommandHandler("welcome", start)], # Cambiado a /welcome
-    states=states, # Tu diccionario de estados
-    fallbacks=[CommandHandler("cancelar", cancelar)]
-)

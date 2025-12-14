@@ -30,8 +30,7 @@ async def menu_principal(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📝 `/welcome` - Iniciar onboarding/contrato\n"
         "🖨️ `/print` - Imprimir o enviar archivo\n"
         "🌴 `/vacaciones` - Solicitar días libres\n"
-        "⏱️ `/permiso` - Solicitar permiso por horas\n"
-        "🔍 `/socia_finder` - Buscar datos de una compañera\n\n"
+        "⏱️ `/permiso` - Solicitar permiso por horas\n\n"
         "Selecciona un comando para empezar."
     )
     await update.message.reply_text(texto)

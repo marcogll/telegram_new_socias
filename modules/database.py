@@ -1,28 +1,12 @@
-import os
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, MetaData, Table
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
 import logging
+import os
+from datetime import datetime
+from sqlalchemy import Column, DateTime, Integer, MetaData, String, create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 # Configuración de logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-# Construir la URL de la base de datos desde las variables de entorno individuales
-try:
-    user = os.getenv("MYSQL_USER")
-    password = os.getenv("MYSQL_PASSWORD")
-    host = "db"  # El nombre del servicio de la base de datos en docker-compose
-    database = os.getenv("MYSQL_DATABASE")
-    DATABASE_URL = f"mysql+mysqlconnector://{user}:{password}@{host}:3306/{database}"
-    
-    # Crear el motor de la base de datos
-    engine = create_engine(DATABASE_URL)
-    metadata = MetaData()
-
-except AttributeError:
-    logging.error("Error: Faltan una o más variables de entorno para la base de datos (MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE).")
-    exit(1)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 # Base para los modelos declarativos
 Base = declarative_base()
@@ -37,21 +21,47 @@ class RequestLog(Base):
     message = Column(String(500))
     created_at = Column(DateTime, default=datetime.utcnow)
 
+def _build_engine():
+    """Crea un engine de SQLAlchemy si hay variables de entorno suficientes."""
+    user = os.getenv("MYSQL_USER")
+    password = os.getenv("MYSQL_PASSWORD")
+    database = os.getenv("MYSQL_DATABASE")
+    host = os.getenv("MYSQL_HOST") or "db"  # Permitimos override para uso local
+
+    if not all([user, password, database]):
+        logging.warning("DB logging deshabilitado: faltan MYSQL_USER/MYSQL_PASSWORD/MYSQL_DATABASE.")
+        return None
+
+    try:
+        db_url = f"mysql+mysqlconnector://{user}:{password}@{host}:3306/{database}"
+        return create_engine(db_url, pool_pre_ping=True)
+    except Exception as exc:
+        logging.error(f"No se pudo crear el engine de base de datos: {exc}")
+        return None
+
+# Crear el engine y sesión si es posible
+engine = _build_engine()
+metadata = MetaData() if engine else None
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine) if engine else None
+
 # Función para inicializar la base de datos
 def init_db():
+    if not engine:
+        return
     try:
         logging.info("Inicializando la base de datos y creando tablas si no existen...")
         Base.metadata.create_all(bind=engine)
         logging.info("Tablas verificadas/creadas correctamente.")
     except Exception as e:
         logging.error(f"Error al inicializar la base de datos: {e}")
-        raise
-
-# Crear una sesión para interactuar con la base de datos
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        # No propagamos para que el bot pueda seguir levantando aunque no haya DB
 
 # Función para registrar una solicitud en la base de datos
 def log_request(telegram_id, username, command, message):
+    if not SessionLocal:
+        logging.debug("Log de DB omitido (DB no configurada).")
+        return
+
     db_session = SessionLocal()
     try:
         log_entry = RequestLog(
