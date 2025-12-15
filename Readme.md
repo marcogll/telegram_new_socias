@@ -85,6 +85,23 @@ Para detener los contenedores, presiona `Ctrl+C` en la terminal donde se están 
 docker-compose down
 ```
 
+### 4. Despliegue con imagen pre-construida (Collify)
+Si Collify solo consume imágenes ya publicadas, usa el archivo `docker-compose.collify.yml` que apunta a una imagen en registro (`DOCKER_IMAGE`).
+
+1) Construir y publicar la imagen (ejemplo con Buildx y tag con timestamp):
+```bash
+export DOCKER_IMAGE=registry.example.com/vanessa-bot:prod-$(date +%Y%m%d%H%M)
+docker buildx build --platform linux/amd64 -t $DOCKER_IMAGE . --push
+```
+
+2) Desplegar en el servidor (Collify) usando la imagen publicada:
+```bash
+export DOCKER_IMAGE=registry.example.com/vanessa-bot:prod-20240101
+docker compose -f docker-compose.collify.yml pull
+docker compose -f docker-compose.collify.yml up -d
+```
+`docker-compose.collify.yml` usa `env_file: .env`, así que carga las credenciales igual que en local o configúralas como variables de entorno en la plataforma.
+
 ---
 
 ## 🧩 Arquitectura Interna
