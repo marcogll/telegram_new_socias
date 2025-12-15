@@ -1,12 +1,18 @@
 import os
 import requests
-import uuid
+import secrets
+import string
 from datetime import datetime, date
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import CommandHandler, ContextTypes, ConversationHandler, MessageHandler, filters
 from modules.database import log_request
 from modules.ui import main_actions_keyboard
 from modules.ai import classify_reason
+
+# IDs cortos para correlación y trazabilidad
+def _short_id(length: int = 11) -> str:
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
 
 # Helpers de webhooks
 def _get_webhook_list(env_name: str) -> list:
@@ -74,10 +80,16 @@ def _parse_anio(texto: str) -> int:
 def _build_dates(datos: dict) -> dict:
     """Construye fechas ISO; si fin < inicio, se ajusta a inicio."""
     try:
-        inicio = date(datos.get("inicio_anio", ANIO_ACTUAL), datos["inicio_mes"], datos["inicio_dia"])
+        inicio_anio = datos.get("inicio_anio", ANIO_ACTUAL)
+        inicio = date(inicio_anio, datos["inicio_mes"], datos["inicio_dia"])
         fin_dia = datos.get("fin_dia", datos.get("inicio_dia"))
         fin_mes = datos.get("fin_mes", datos.get("inicio_mes"))
         fin_anio = datos.get("fin_anio", datos.get("inicio_anio", inicio.year))
+        # Ajuste automático para cruces de año (ej: 28 Dic -> 15 Ene)
+        if fin_anio == inicio.year and (
+            fin_mes < inicio.month or (fin_mes == inicio.month and fin_dia < inicio.day)
+        ):
+            fin_anio = inicio.year + 1
         fin = date(fin_anio, fin_mes, fin_dia)
         if fin < inicio:
             fin = inicio
@@ -262,7 +274,7 @@ async def recibir_motivo_fin(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return ConversationHandler.END
     
     payload = {
-        "record_id": str(uuid.uuid4()),
+        "record_id": _short_id(),
         "solicitante": {
             "id_telegram": user.id,
             "nombre": user.full_name,
@@ -381,7 +393,8 @@ vacaciones_handler = ConversationHandler(
         FIN_ANIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_fin_anio)],
         MOTIVO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_motivo_fin)]
     },
-    fallbacks=[CommandHandler("cancelar", cancelar)]
+    fallbacks=[CommandHandler("cancelar", cancelar)],
+    allow_reentry=True
 )
 
 permiso_handler = ConversationHandler(
@@ -396,5 +409,6 @@ permiso_handler = ConversationHandler(
         HORARIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_horario)],
         MOTIVO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_motivo_fin)]
     },
-    fallbacks=[CommandHandler("cancelar", cancelar)]
+    fallbacks=[CommandHandler("cancelar", cancelar)],
+    allow_reentry=True
 )

@@ -131,10 +131,10 @@ TECLADO_MESES = ReplyKeyboardMarkup(
     one_time_keyboard=True, resize_keyboard=True
 )
 
-# Años: Actual y Siguiente
-anio_actual = datetime.now().year
+# Años de ingreso permitidos (2020-2026)
+ANIOS_INGRESO = [str(anio) for anio in range(2020, 2027)]
 TECLADO_ANIOS_INICIO = ReplyKeyboardMarkup(
-    [[str(anio_actual), str(anio_actual + 1)]],
+    [ANIOS_INGRESO[i:i+3] for i in range(0, len(ANIOS_INGRESO), 3)],
     one_time_keyboard=True, resize_keyboard=True
 )
 
@@ -315,13 +315,16 @@ async def finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     # Derivados
     num_ext_texto = numero_a_texto(r.get(NUM_EXTERIOR, ""), r.get(NUM_INTERIOR, ""))
     # El número de empleado debe ser solo la fecha de inicio en formato AAMMDD.
+    curp_val = (r.get(CURP) or "").upper()
+    curp_prefijo = curp_val[:4] if len(curp_val) >= 4 else "XXXX"
     try:
         fecha_inicio_dt = datetime.strptime(fecha_ini, "%Y-%m-%d")
-        n_empleado = fecha_inicio_dt.strftime("%y%m%d")
+        n_empleado = f"{curp_prefijo}{fecha_inicio_dt.strftime('%y%m%d')}"
     except Exception:
         # Fallback defensivo para no romper el flujo si viene un formato raro.
         fecha_compacta = fecha_ini.replace("-", "")
-        n_empleado = fecha_compacta[-6:] if len(fecha_compacta) >= 6 else fecha_compacta or "N/A"
+        sufijo_fecha = fecha_compacta[-6:] if len(fecha_compacta) >= 6 else fecha_compacta or "N/A"
+        n_empleado = f"{curp_prefijo}{sufijo_fecha}"
     
     # PAYLOAD ESTRUCTURADO PARA N8N
     payload = {
@@ -426,7 +429,8 @@ states[34] = [MessageHandler(filters.TEXT & ~filters.COMMAND, finalizar)]
 onboarding_handler = ConversationHandler(
     entry_points=[CommandHandler("welcome", start)], # Cambiado a /welcome
     states=states, # Tu diccionario de estados
-    fallbacks=[CommandHandler("cancelar", cancelar)]
+    fallbacks=[CommandHandler("cancelar", cancelar)],
+    allow_reentry=True
 )
 
 def main():
