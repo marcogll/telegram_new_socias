@@ -27,7 +27,7 @@ async def menu_principal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto = (
         "👩‍💼 **Hola, soy Vanessa. ¿En qué puedo ayudarte hoy?**\n\n"
         "Comandos rápidos:\n"
-        "/welcome — Onboarding\n"
+        "/welcome — Registro de nuevas empleadas\n"
         "/vacaciones — Solicitud de vacaciones\n"
         "/permiso — Solicitud de permiso por horas\n\n"
         "También tienes los botones rápidos abajo 👇"
@@ -42,7 +42,7 @@ async def post_init(application: Application):
     # Mantén los comandos rápidos disponibles en el menú de Telegram
     await application.bot.set_my_commands([
         BotCommand("start", "Mostrar menú principal"),
-        BotCommand("welcome", "Iniciar onboarding"),
+        BotCommand("welcome", "Registro de nuevas empleadas"),
         BotCommand("vacaciones", "Solicitar vacaciones"),
         BotCommand("permiso", "Solicitar permiso por horas"),
         BotCommand("cancelar", "Cancelar flujo actual"),

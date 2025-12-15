@@ -25,16 +25,17 @@ def _send_webhooks(urls: list, payload: dict):
 
 # Estados de conversación
 (
-    VAC_ANIO,
     INICIO_DIA,
     INICIO_MES,
+    INICIO_ANIO,
     FIN_DIA,
     FIN_MES,
+    FIN_ANIO,
     PERMISO_CUANDO,
     PERMISO_ANIO,
     HORARIO,
     MOTIVO,
-) = range(9)
+) = range(10)
 
 # Teclados de apoyo
 MESES = [
@@ -71,12 +72,12 @@ def _parse_anio(texto: str) -> int:
 
 def _build_dates(datos: dict) -> dict:
     """Construye fechas ISO; si fin < inicio, se ajusta a inicio."""
-    year = datos.get("anio") or datetime.now().year
     try:
-        inicio = date(year, datos["inicio_mes"], datos["inicio_dia"])
+        inicio = date(datos.get("inicio_anio", ANIO_ACTUAL), datos["inicio_mes"], datos["inicio_dia"])
         fin_dia = datos.get("fin_dia", datos.get("inicio_dia"))
         fin_mes = datos.get("fin_mes", datos.get("inicio_mes"))
-        fin = date(year, fin_mes, fin_dia)
+        fin_anio = datos.get("fin_anio", datos.get("inicio_anio", inicio.year))
+        fin = date(fin_anio, fin_mes, fin_dia)
         if fin < inicio:
             fin = inicio
         return {"inicio": inicio, "fin": fin}
@@ -111,9 +112,8 @@ async def start_vacaciones(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     log_request(user.id, user.username, "vacaciones", update.message.text)
     context.user_data.clear()
     context.user_data['tipo'] = 'VACACIONES'
-    context.user_data["anio"] = ANIO_ACTUAL
     await update.message.reply_text(
-        "🌴 **Solicitud de Vacaciones**\n\nUsaré el año actual. ¿En qué *día* inicia tu descanso? (número, ej: 10)",
+        "🌴 **Solicitud de Vacaciones**\n\nVamos a registrar tu descanso. ¿Qué *día* inicia? (número, ej: 10)",
         reply_markup=ReplyKeyboardRemove(),
     )
     return INICIO_DIA
@@ -131,13 +131,13 @@ async def start_permiso(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     return PERMISO_CUANDO
 
 # --- Selección de año / cuando ---
-async def recibir_anio_vacaciones(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def recibir_inicio_anio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     anio = _parse_anio(update.message.text)
     if anio not in (ANIO_ACTUAL, ANIO_ACTUAL + 1):
         await update.message.reply_text("Elige el año del teclado (actual o siguiente).", reply_markup=TECLADO_ANIOS)
-        return VAC_ANIO
-    context.user_data["anio"] = anio
-    await update.message.reply_text("¿Qué *día* termina?", reply_markup=ReplyKeyboardRemove())
+        return INICIO_ANIO
+    context.user_data["inicio_anio"] = anio
+    await update.message.reply_text("¿Qué *día* termina tu descanso?", reply_markup=ReplyKeyboardRemove())
     return FIN_DIA
 
 async def recibir_cuando_permiso(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -147,7 +147,8 @@ async def recibir_cuando_permiso(update: Update, context: ContextTypes.DEFAULT_T
     if texto in offset_map:
         delta = offset_map[texto]
         fecha = hoy.fromordinal(hoy.toordinal() + delta)
-        context.user_data["anio"] = fecha.year
+        context.user_data["inicio_anio"] = fecha.year
+        context.user_data["fin_anio"] = fecha.year
         context.user_data["inicio_dia"] = fecha.day
         context.user_data["inicio_mes"] = fecha.month
         context.user_data["fin_dia"] = fecha.day
@@ -155,9 +156,8 @@ async def recibir_cuando_permiso(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_text("¿Cuál es el horario? Ej: `09:00-11:00` o `Todo el día`.", reply_markup=ReplyKeyboardRemove())
         return HORARIO
     if "fecha" in texto:
-        context.user_data["anio"] = ANIO_ACTUAL
-        await update.message.reply_text("¿En qué *día* inicia el permiso? (número, ej: 12)", reply_markup=ReplyKeyboardRemove())
-        return INICIO_DIA
+        await update.message.reply_text("¿Para qué año es el permiso? (elige el actual o el siguiente)", reply_markup=TECLADO_ANIOS)
+        return PERMISO_ANIO
     await update.message.reply_text("Elige una opción: Hoy, Mañana, Pasado mañana o Fecha específica.", reply_markup=TECLADO_PERMISO_CUANDO)
     return PERMISO_CUANDO
 
@@ -166,9 +166,13 @@ async def recibir_anio_permiso(update: Update, context: ContextTypes.DEFAULT_TYP
     if anio not in (ANIO_ACTUAL, ANIO_ACTUAL + 1):
         await update.message.reply_text("Elige el año del teclado (actual o siguiente).", reply_markup=TECLADO_ANIOS)
         return PERMISO_ANIO
-    context.user_data["anio"] = anio
-    await update.message.reply_text("¿Qué *día* termina?", reply_markup=ReplyKeyboardRemove())
-    return FIN_DIA
+    context.user_data["inicio_anio"] = anio
+    context.user_data["fin_anio"] = anio
+    if "inicio_dia" in context.user_data:
+        await update.message.reply_text("¿Qué *día* termina?", reply_markup=ReplyKeyboardRemove())
+        return FIN_DIA
+    await update.message.reply_text("¿En qué *día* inicia el permiso? (número, ej: 12)", reply_markup=ReplyKeyboardRemove())
+    return INICIO_DIA
 
 # --- Captura de fechas ---
 async def recibir_inicio_dia(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -186,16 +190,21 @@ async def recibir_inicio_mes(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("Elige un mes del teclado o escríbelo igual que aparece.", reply_markup=TECLADO_MESES)
         return INICIO_MES
     context.user_data["inicio_mes"] = mes
-    context.user_data.setdefault("anio", ANIO_ACTUAL)
+    if context.user_data.get("tipo") == "VACACIONES":
+        await update.message.reply_text("¿De qué *año* inicia?", reply_markup=TECLADO_ANIOS)
+        return INICIO_ANIO
+
+    context.user_data.setdefault("inicio_anio", ANIO_ACTUAL)
+    context.user_data.setdefault("fin_anio", context.user_data.get("inicio_anio", ANIO_ACTUAL))
 
     try:
-        inicio_candidato = date(context.user_data["anio"], mes, context.user_data["inicio_dia"])
+        inicio_candidato = date(context.user_data["inicio_anio"], mes, context.user_data["inicio_dia"])
         if inicio_candidato < date.today():
             await update.message.reply_text(
                 "Esa fecha ya pasó este año. ¿Para qué año la agendamos?",
                 reply_markup=TECLADO_ANIOS
             )
-            return VAC_ANIO if context.user_data.get("tipo") == "VACACIONES" else PERMISO_ANIO
+            return PERMISO_ANIO
     except Exception:
         pass
 
@@ -219,9 +228,19 @@ async def recibir_fin_mes(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     context.user_data["fin_mes"] = mes
 
     if context.user_data.get("tipo") == "PERMISO":
+        context.user_data.setdefault("fin_anio", context.user_data.get("inicio_anio", ANIO_ACTUAL))
         await update.message.reply_text("¿Cuál es el horario? Ej: `09:00-11:00` o `Todo el día`.", reply_markup=ReplyKeyboardRemove())
         return HORARIO
 
+    await update.message.reply_text("¿De qué *año* termina tu descanso?", reply_markup=TECLADO_ANIOS)
+    return FIN_ANIO
+
+async def recibir_fin_anio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    anio = _parse_anio(update.message.text)
+    if anio not in (ANIO_ACTUAL, ANIO_ACTUAL + 1):
+        await update.message.reply_text("Elige el año del teclado (actual o siguiente).", reply_markup=TECLADO_ANIOS)
+        return FIN_ANIO
+    context.user_data["fin_anio"] = anio
     await update.message.reply_text("Entendido. ¿Cuál es el motivo o comentario adicional?", reply_markup=ReplyKeyboardRemove())
     return MOTIVO
 
@@ -271,21 +290,28 @@ async def recibir_motivo_fin(update: Update, context: ContextTypes.DEFAULT_TYPE)
         
         if metrics["dias_totales"] > 0:
             payload["metricas"] = metrics
-            
+
             dias = metrics["dias_totales"]
-            if dias <= 5:
+            anticipacion = metrics.get("dias_anticipacion", 0)
+            if anticipacion < 0:
+                status = "RECHAZADO"
+                mensaje = "🔴 No puedo agendar vacaciones en el pasado. Ajusta tus fechas."
+            elif anticipacion > 30:
+                status = "RECHAZADO"
+                mensaje = "🔴 Debes solicitar vacaciones con máximo 30 días de anticipación."
+            elif dias < 6:
                 status = "RECHAZADO"
                 mensaje = f"🔴 {dias} días es un periodo muy corto. Las vacaciones deben ser de al menos 6 días."
             elif dias > 30:
                 status = "RECHAZADO"
                 mensaje = "🔴 Las vacaciones no pueden exceder 30 días. Ajusta tus fechas, por favor."
             elif 6 <= dias <= 11:
-                status = "REVISION_MANUAL"
-                mensaje = f"🟡 Solicitud de {dias} días recibida. Tu manager la revisará pronto."
+                status = "APROBACION_ESPECIAL"
+                mensaje = f"🟠 Solicitud de {dias} días: requiere aprobación especial."
             else: # 12-30
-                status = "PRE_APROBADO"
-                mensaje = f"🟢 ¡Excelente planeación! Tu solicitud de {dias} días ha sido pre-aprobada (ideal: 12 días)."
-            
+                status = "EN_ESPERA_APROBACION"
+                mensaje = f"🟡 Solicitud de {dias} días registrada. Queda en espera de aprobación."
+
             payload["status_inicial"] = status
             await update.message.reply_text(mensaje)
         else:
@@ -334,11 +360,12 @@ async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 vacaciones_handler = ConversationHandler(
     entry_points=[CommandHandler("vacaciones", start_vacaciones)],
     states={
-        VAC_ANIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_anio_vacaciones)],
         INICIO_DIA: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_inicio_dia)],
         INICIO_MES: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_inicio_mes)],
+        INICIO_ANIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_inicio_anio)],
         FIN_DIA: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_fin_dia)],
         FIN_MES: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_fin_mes)],
+        FIN_ANIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_fin_anio)],
         MOTIVO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_motivo_fin)]
     },
     fallbacks=[CommandHandler("cancelar", cancelar)]
