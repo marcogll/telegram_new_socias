@@ -140,7 +140,7 @@ TECLADO_ANIOS_INICIO = ReplyKeyboardMarkup(
 
 # Roles
 TECLADO_ROLES = ReplyKeyboardMarkup(
-    [["Partner", "Manager"], ["Staff", "Tech"], ["Marketing"]],
+    [["Belleza", "Staff (Recepción)"], ["Marketing"]],
     one_time_keyboard=True, resize_keyboard=True
 )
 
@@ -250,7 +250,16 @@ async def manejar_flujo(update: Update, context: ContextTypes.DEFAULT_TYPE, esta
         CODIGO_POSTAL: {"texto": "¿En qué *ciudad* resides actualmente?", "teclado": TECLADO_CIUDAD},
         
         # Laboral
-        CIUDAD_RESIDENCIA: {"texto": "¡Excelente! Coahuila es territorio Vanity 🌵.\n\n¿Qué *rol* tendrás en el equipo? 💼", "teclado": TECLADO_ROLES},
+        CIUDAD_RESIDENCIA: {
+            "texto": "¡Excelente! Coahuila es territorio Vanity 🌵.\n\n"
+                     "🔎 *Rol dentro del equipo*\n"
+                     "Elige la opción que mejor describa tu posición:\n"
+                     "• *Belleza* — servicios de estética y spa\n"
+                     "• *Staff (Recepción)* — agenda y atención a clientes\n"
+                     "• *Marketing* — contenido, promos y comunidad\n\n"
+                     "_Toca un botón o escribe la opción:_",
+            "teclado": TECLADO_ROLES
+        },
         ROL: {"texto": "¿A qué *sucursal* te vas a integrar? 📍", "teclado": TECLADO_SUCURSALES},
         SUCURSAL: "¡Qué emoción! 🎉\n\n¿Qué *día* está programado tu ingreso? (Solo el número, ej: 01)",
         INICIO_DIA: {"texto": "¿De qué *mes* será tu ingreso?", "teclado": TECLADO_MESES},
