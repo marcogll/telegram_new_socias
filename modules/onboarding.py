@@ -251,8 +251,7 @@ async def manejar_flujo(update: Update, context: ContextTypes.DEFAULT_TYPE, esta
         
         # Laboral
         CIUDAD_RESIDENCIA: {
-            "texto": "¡Excelente! Coahuila es territorio Vanity 🌵.\n\n"
-                     "🔎 *Rol dentro del equipo*\n"
+            "texto": "🔎 *Rol dentro del equipo*\n"
                      "Elige la opción que mejor describa tu posición:\n"
                      "• *Belleza* — servicios de estética y spa\n"
                      "• *Staff (Recepción)* — agenda y atención a clientes\n"
