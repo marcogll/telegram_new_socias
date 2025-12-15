@@ -1,4 +1,18 @@
 import os
+import importlib
+import importlib.metadata as importlib_metadata
+
+# Compatibilidad para entornos donde packages_distributions no existe (p.ej. Python 3.9 con importlib recortado).
+if not hasattr(importlib_metadata, "packages_distributions"):
+    try:
+        import importlib_metadata as backport_metadata  # type: ignore
+        if hasattr(backport_metadata, "packages_distributions"):
+            importlib_metadata.packages_distributions = backport_metadata.packages_distributions  # type: ignore[attr-defined]
+        else:
+            importlib_metadata.packages_distributions = lambda: {}  # type: ignore[assignment]
+    except Exception:
+        importlib_metadata.packages_distributions = lambda: {}  # type: ignore[assignment]
+
 import google.generativeai as genai
 
 def classify_reason(text: str) -> str:

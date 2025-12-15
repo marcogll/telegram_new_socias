@@ -90,13 +90,13 @@ Si Collify solo consume imágenes ya publicadas, usa el archivo `docker-compose.
 
 1) Construir y publicar la imagen (ejemplo con Buildx y tag con timestamp):
 ```bash
-export DOCKER_IMAGE=registry.example.com/vanessa-bot:prod-$(date +%Y%m%d%H%M)
+export DOCKER_IMAGE=marcogll/vanessa-bot:prod-$(date +%Y%m%d%H%M)
 docker buildx build --platform linux/amd64 -t $DOCKER_IMAGE . --push
 ```
 
 2) Desplegar en el servidor (Collify) usando la imagen publicada:
 ```bash
-export DOCKER_IMAGE=registry.example.com/vanessa-bot:prod-20240101
+export DOCKER_IMAGE=marcogll/vanessa-bot:prod-20240101
 docker compose -f docker-compose.collify.yml pull
 docker compose -f docker-compose.collify.yml up -d
 ```

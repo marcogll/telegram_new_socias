@@ -5,6 +5,7 @@ from datetime import datetime, date
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import CommandHandler, ContextTypes, ConversationHandler, MessageHandler, filters
 from modules.database import log_request
+from modules.ui import main_actions_keyboard
 from modules.ai import classify_reason
 
 # Helpers de webhooks
@@ -342,18 +343,30 @@ async def recibir_motivo_fin(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 f"- Estatus inicial: {payload.get('status_inicial', 'N/A')}"
             )
         if enviados > 0:
-            await update.message.reply_text(f"✅ Solicitud de *{tipo_solicitud_texto}* enviada a tu Manager.\n\n{resumen}")
+            await update.message.reply_text(
+                f"✅ Solicitud de *{tipo_solicitud_texto}* enviada a tu Manager.\n\n{resumen}",
+                reply_markup=main_actions_keyboard()
+            )
         else:
-            await update.message.reply_text(f"⚠️ No hay webhook configurado o falló el envío. RH lo revisará.\n\n{resumen}")
+            await update.message.reply_text(
+                f"⚠️ No hay webhook configurado o falló el envío. RH lo revisará.\n\n{resumen}",
+                reply_markup=main_actions_keyboard()
+            )
     except Exception as e:
         print(f"Error enviando webhook: {e}")
-        await update.message.reply_text("⚠️ Error enviando la solicitud.")
+        await update.message.reply_text(
+            "⚠️ Error enviando la solicitud.",
+            reply_markup=main_actions_keyboard()
+        )
 
     return ConversationHandler.END
 
 
 async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text("Solicitud cancelada.")
+    await update.message.reply_text(
+        "Solicitud cancelada. ⏸️\nPuedes volver a iniciar con /vacaciones o /permiso, o ir al menú con /start.",
+        reply_markup=main_actions_keyboard(),
+    )
     return ConversationHandler.END
 
 # Handlers separados pero comparten lógica

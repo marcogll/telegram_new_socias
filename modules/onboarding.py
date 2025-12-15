@@ -18,6 +18,7 @@ from telegram.ext import (
 )
 
 from modules.database import log_request
+from modules.ui import main_actions_keyboard
 
 # --- 1. CARGA DE ENTORNO ---
 load_dotenv()  # Carga las variables del archivo .env
@@ -304,8 +305,14 @@ async def finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         fecha_ini = "ERROR_FECHA"
     # Derivados
     num_ext_texto = numero_a_texto(r.get(NUM_EXTERIOR, ""), r.get(NUM_INTERIOR, ""))
-    curp_base = (r.get(CURP) or "").upper()
-    n_empleado = f"{(curp_base + 'XXXX')[:4]}{fecha_ini.replace('-', '')}"
+    # El número de empleado debe ser solo la fecha de inicio en formato AAMMDD.
+    try:
+        fecha_inicio_dt = datetime.strptime(fecha_ini, "%Y-%m-%d")
+        n_empleado = fecha_inicio_dt.strftime("%y%m%d")
+    except Exception:
+        # Fallback defensivo para no romper el flujo si viene un formato raro.
+        fecha_compacta = fecha_ini.replace("-", "")
+        n_empleado = fecha_compacta[-6:] if len(fecha_compacta) >= 6 else fecha_compacta or "N/A"
     
     # PAYLOAD ESTRUCTURADO PARA N8N
     payload = {
@@ -378,18 +385,22 @@ async def finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text(
             "✅ *¡Registro Exitoso!*\n\n"
             "Bienvenida a la familia Soul/Vanity. Tu contrato se está generando y te avisaremos pronto.\n"
-            "¡Nos vemos el primer día! ✨"
+            "¡Nos vemos el primer día! ✨",
+            reply_markup=main_actions_keyboard()
         )
     else:
-        await update.message.reply_text("⚠️ Se guardaron tus datos pero hubo un error de conexión. RH lo revisará manualmente.")
+        await update.message.reply_text(
+            "⚠️ Se guardaron tus datos pero hubo un error de conexión. RH lo revisará manualmente.",
+            reply_markup=main_actions_keyboard()
+        )
 
     context.user_data.clear()
     return ConversationHandler.END
 
 async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
-        "Proceso cancelado. ⏸️\nCuando quieras retomar, escribe /contrato.",
-        reply_markup=ReplyKeyboardRemove()
+        "Proceso cancelado. ⏸️\nPuedes retomarlo con /welcome o ir al menú con /start.",
+        reply_markup=main_actions_keyboard()
     )
     context.user_data.clear()
     return ConversationHandler.END
