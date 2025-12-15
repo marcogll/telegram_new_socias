@@ -146,3 +146,9 @@ Incluye derivadas útiles: `num_ext_texto` (número en letras, con interior) y `
 ✔ Auditable
 
 Vanessa está viva. Y aprende con cada flujo nuevo.
+
+---
+
+## 🗒️ Registro de versiones
+
+- **1.2 (2025-01-25)** — Onboarding: selector de año 2020–2026; `numero_empleado` incluye prefijo CURP (4 chars) + fecha de ingreso; vacaciones/permiso ajustan fin automático al siguiente año cuando aplica.
