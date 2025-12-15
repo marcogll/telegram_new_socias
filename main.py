@@ -5,13 +5,12 @@ from dotenv import load_dotenv
 # Cargar variables de entorno antes de importar módulos que las usan
 load_dotenv()
 
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, BotCommand
 from telegram.constants import ParseMode
 from telegram.ext import Application, Defaults, CommandHandler, ContextTypes
 
 # --- IMPORTAR HABILIDADES ---
 from modules.onboarding import onboarding_handler
-from modules.printer import print_handler
 from modules.rh_requests import vacaciones_handler, permiso_handler
 from modules.database import log_request
 # from modules.finder import finder_handler (Si lo creas después)
@@ -27,18 +26,38 @@ async def menu_principal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_request(user.id, user.username, "start", update.message.text)
     texto = (
         "👩‍💼 **Hola, soy Vanessa. ¿En qué puedo ayudarte hoy?**\n\n"
-        "Toca un comando en azul para lanzarlo rápido:"
+        "Comandos rápidos:\n"
+        "/welcome — Onboarding\n"
+        "/vacaciones — Solicitud de vacaciones\n"
+        "/permiso — Solicitud de permiso por horas\n\n"
+        "También tienes los botones rápidos abajo 👇"
     )
     teclado = ReplyKeyboardMarkup(
-        [["/welcome", "/print"], ["/vacaciones", "/permiso"]],
+        [["/welcome"], ["/vacaciones", "/permiso"]],
         resize_keyboard=True
     )
     await update.message.reply_text(texto, reply_markup=teclado)
 
+async def post_init(application: Application):
+    # Mantén los comandos rápidos disponibles en el menú de Telegram
+    await application.bot.set_my_commands([
+        BotCommand("start", "Mostrar menú principal"),
+        BotCommand("welcome", "Iniciar onboarding"),
+        BotCommand("vacaciones", "Solicitar vacaciones"),
+        BotCommand("permiso", "Solicitar permiso por horas"),
+        BotCommand("cancelar", "Cancelar flujo actual"),
+    ])
+
 def main():
     # Configuración Global
     defaults = Defaults(parse_mode=ParseMode.MARKDOWN)
-    app = Application.builder().token(TOKEN).defaults(defaults).build()
+    app = (
+        Application.builder()
+        .token(TOKEN)
+        .defaults(defaults)
+        .post_init(post_init)
+        .build()
+    )
 
     # --- REGISTRO DE HABILIDADES ---
     
@@ -48,7 +67,6 @@ def main():
 
     # 2. Habilidades Complejas (Conversaciones)
     app.add_handler(onboarding_handler)
-    app.add_handler(print_handler)
     app.add_handler(vacaciones_handler)
     app.add_handler(permiso_handler)
     # app.add_handler(finder_handler)

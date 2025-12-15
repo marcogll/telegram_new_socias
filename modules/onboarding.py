@@ -67,6 +67,55 @@ def limpiar_texto_general(texto: str) -> str:
     t = " ".join(texto.split())
     return "N/A" if t == "0" else t
 
+def _num_to_words_es_hasta_999(n: int) -> str:
+    """Convierte un número (0-999) a texto en español sin acentos."""
+    if n < 0 or n > 999:
+        return str(n)
+    unidades = ["cero", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"]
+    especiales = {
+        10: "diez", 11: "once", 12: "doce", 13: "trece", 14: "catorce", 15: "quince",
+        20: "veinte", 30: "treinta", 40: "cuarenta", 50: "cincuenta",
+        60: "sesenta", 70: "setenta", 80: "ochenta", 90: "noventa",
+        100: "cien", 200: "doscientos", 300: "trescientos", 400: "cuatrocientos",
+        500: "quinientos", 600: "seiscientos", 700: "setecientos",
+        800: "ochocientos", 900: "novecientos"
+    }
+    if n < 10:
+        return unidades[n]
+    if n in especiales:
+        return especiales[n]
+    if n < 20:
+        return "dieci" + unidades[n - 10]
+    if n < 30:
+        return "veinti" + unidades[n - 20]
+    if n < 100:
+        decenas = (n // 10) * 10
+        resto = n % 10
+        return f"{especiales[decenas]} y {unidades[resto]}"
+    centenas = (n // 100) * 100
+    resto = n % 100
+    if centenas == 100 and resto > 0:
+        prefijo = "ciento"
+    else:
+        prefijo = especiales.get(centenas, str(centenas))
+    if resto == 0:
+        return prefijo
+    return f"{prefijo} { _num_to_words_es_hasta_999(resto)}"
+
+def numero_a_texto(num_ext: str, num_int: str) -> str:
+    """Devuelve un resumen textual del numero exterior (+ interior si aplica)."""
+    import re
+    texto_base = limpiar_texto_general(num_ext)
+    interior = limpiar_texto_general(num_int)
+    m = re.match(r"(\d+)", texto_base)
+    if not m:
+        return texto_base
+    numero = int(m.group(1))
+    en_letras = _num_to_words_es_hasta_999(numero)
+    if interior and interior.upper() != "N/A":
+        return f"{en_letras}, interior {interior}".strip()
+    return en_letras
+
 # --- 4. TECLADOS DINÁMICOS ---
 
 # Meses: Texto vs Valor
@@ -130,7 +179,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "telegram_id": user.id,
         "username": user.username or "N/A",
         "first_name": user.first_name,
-        "start_ts": datetime.now().timestamp()
+        "start_ts": datetime.now().timestamp(),
+        "msg_count": 0,
     }
     context.user_data["respuestas"] = {}
     
@@ -146,6 +196,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def manejar_flujo(update: Update, context: ContextTypes.DEFAULT_TYPE, estado_actual: int) -> int:
     texto_recibido = update.message.text
     respuesta_procesada = limpiar_texto_general(texto_recibido)
+    meta = context.user_data.get("metadata", {})
+    meta["msg_count"] = meta.get("msg_count", 0) + 1
+    context.user_data["metadata"] = meta
 
     # --- LÓGICA DE PROCESAMIENTO ESPECÍFICA POR ESTADO ---
     
@@ -233,6 +286,9 @@ async def manejar_flujo(update: Update, context: ContextTypes.DEFAULT_TYPE, esta
 async def finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     # Guardar última respuesta (Relación Emergencia)
     context.user_data["respuestas"][EMERGENCIA_RELACION] = limpiar_texto_general(update.message.text)
+    meta = context.user_data.get("metadata", {})
+    meta["msg_count"] = meta.get("msg_count", 0) + 1
+    context.user_data["metadata"] = meta
     
     await update.message.reply_text("¡Perfecto! 📝 Guardando tu expediente en el sistema... dame un momento.")
 
@@ -246,6 +302,10 @@ async def finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     except Exception:
         fecha_nac = "ERROR_FECHA"
         fecha_ini = "ERROR_FECHA"
+    # Derivados
+    num_ext_texto = numero_a_texto(r.get(NUM_EXTERIOR, ""), r.get(NUM_INTERIOR, ""))
+    curp_base = (r.get(CURP) or "").upper()
+    n_empleado = f"{(curp_base + 'XXXX')[:4]}{fecha_ini.replace('-', '')}"
     
     # PAYLOAD ESTRUCTURADO PARA N8N
     payload = {
@@ -267,6 +327,7 @@ async def finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             "calle": r.get(CALLE),
             "num_ext": r.get(NUM_EXTERIOR),
             "num_int": r.get(NUM_INTERIOR),
+            "num_ext_texto": num_ext_texto,
             "colonia": r.get(COLONIA),
             "cp": r.get(CODIGO_POSTAL),
             "ciudad": r.get(CIUDAD_RESIDENCIA),
@@ -275,7 +336,8 @@ async def finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "laboral": {
             "rol_id": r.get(ROL).lower(), # partner, manager...
             "sucursal_id": r.get(SUCURSAL), # plaza_cima, plaza_o
-            "fecha_inicio": fecha_ini
+            "fecha_inicio": fecha_ini,
+            "numero_empleado": n_empleado
         },
         "referencias": [
             {"nombre": r.get(REF1_NOMBRE), "telefono": r.get(REF1_TELEFONO), "relacion": r.get(REF1_TIPO)},
@@ -291,7 +353,9 @@ async def finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             "telegram_user": meta["username"],
             "chat_id": meta["telegram_id"],
             "bot_version": "welcome2soul_v2",
-            "fecha_registro": datetime.now().isoformat()
+            "fecha_registro": datetime.now().isoformat(),
+            "duracion_segundos": round(datetime.now().timestamp() - meta.get("start_ts", datetime.now().timestamp()), 2),
+            "mensajes_totales": meta.get("msg_count", 0)
         }
     }
 

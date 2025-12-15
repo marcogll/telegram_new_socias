@@ -1,6 +1,6 @@
 # 🤖 Vanessa Bot – Asistente de RH para Vanity
 
-Vanessa es un bot de Telegram escrito en Python que automatiza procesos internos de Recursos Humanos en Vanity. Su objetivo es eliminar fricción operativa: onboarding, solicitudes de RH e impresión de documentos, todo orquestado desde Telegram y conectado a flujos de n8n o servicios de correo.
+Vanessa es un bot de Telegram escrito en Python que automatiza procesos internos de Recursos Humanos en Vanity. Su objetivo es eliminar fricción operativa: onboarding y solicitudes de RH, todo orquestado desde Telegram y conectado a flujos de n8n o servicios de correo.
 
 Este repositorio está pensado como **proyecto Python profesional**, modular y listo para correr 24/7 en producción.
 
@@ -11,11 +11,10 @@ Este repositorio está pensado como **proyecto Python profesional**, modular y l
 Vanessa no es un chatbot genérico: es una interfaz conversacional para procesos reales de negocio.
 
 - Onboarding completo de nuevas socias (`/welcome`)
-- Envío de archivos a impresión por correo electrónico (`/print`)
 - Solicitud de vacaciones (`/vacaciones`)
 - Solicitud de permisos por horas (`/permiso`)
 
-Cada flujo es un módulo independiente, y los datos se envían a **webhooks de n8n** o se procesan directamente, como en el caso de la impresión.
+Cada flujo es un módulo independiente, y los datos se envían a **webhooks de n8n**.
 
 ---
 
@@ -36,7 +35,6 @@ vanity_bot/
     ├── __init__.py
     ├── database.py       # Módulo de conexión a la base de datos
     ├── onboarding.py     # Flujo /welcome (onboarding RH)
-    ├── printer.py        # Flujo /print (impresión por email)
     └── rh_requests.py    # /vacaciones y /permiso
 ```
 
@@ -52,8 +50,8 @@ TELEGRAM_TOKEN=TU_TOKEN_AQUI
 
 # --- WEBHOOKS N8N ---
 WEBHOOK_ONBOARDING=https://...   # Alias aceptado: WEBHOOK_CONTRATO
-WEBHOOK_PRINT=https://...
 WEBHOOK_VACACIONES=https://...
+WEBHOOK_PERMISOS=https://...
 
 # --- DATABASE ---
 # Usado por el servicio de la base de datos en docker-compose.yml
@@ -62,13 +60,6 @@ MYSQL_USER=user
 MYSQL_PASSWORD=password
 MYSQL_ROOT_PASSWORD=rootpassword
 
-# --- SMTP PARA IMPRESIÓN ---
-# Usado por el módulo de impresión para enviar correos
-SMTP_SERVER=smtp.hostinger.com
-SMTP_PORT=465
-SMTP_USER=tu_email@dominio.com
-SMTP_PASSWORD=tu_password_de_email
-SMTP_RECIPIENT=email_destino@dominio.com  # También puedes usar PRINTER_EMAIL
 ```
 
 ---
@@ -111,14 +102,12 @@ docker-compose down
 
 ### modules/onboarding.py
 Flujo conversacional complejo que recolecta datos de nuevas empleadas y los envía a un webhook de n8n.
-
-### modules/printer.py
-- Recibe documentos o imágenes desde Telegram.
-- Descarga el archivo de forma segura desde los servidores de Telegram.
-- Se conecta a un servidor SMTP para enviar el archivo como un adjunto por correo electrónico a una dirección predefinida.
+Incluye derivadas útiles: `num_ext_texto` (número en letras, con interior) y `numero_empleado` (primeras 4 del CURP + fecha de ingreso).
 
 ### modules/rh_requests.py
 - Maneja solicitudes simples de RH (Vacaciones y Permisos) y las envía a un webhook de n8n.
+- Vacaciones: pregunta año (actual o siguiente), día/mes de inicio y fin, calcula métricas y aplica semáforo automático.
+- Permisos: ofrece accesos rápidos (hoy/mañana/pasado) o fecha específica (año actual/siguiente, día/mes), pide horario, clasifica motivo con IA y envía al webhook.
 
 ---
 
@@ -128,7 +117,6 @@ Flujo conversacional complejo que recolecta datos de nuevas empleadas y los env�
 - **Python como cerebro**: Lógica de negocio y orquestación.
 - **Docker para despliegue**: Entornos consistentes y portátiles.
 - **MySQL para persistencia**: Registro auditable de todas las interacciones.
-- **SMTP para acciones directas**: Integración con sistemas estándar como el correo.
 - **Modularidad total**: Cada habilidad es un componente independiente.
 
 ---
