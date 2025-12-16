@@ -18,7 +18,7 @@ from telegram.ext import Application, Defaults, CommandHandler, ContextTypes
 # --- IMPORTAR HABILIDADES ---
 from modules.onboarding import onboarding_handler
 from modules.rh_requests import vacaciones_handler, permiso_handler
-from modules.database import log_request
+from modules.database import log_request, chat_id_exists # Importar chat_id_exists
 from modules.ui import main_actions_keyboard
 # from modules.finder import finder_handler (Si lo creas después)
 
@@ -79,13 +79,14 @@ async def menu_principal(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "👩‍💼 **Hola, soy Vanessa. ¿En qué puedo ayudarte hoy?**\n\n"
         "Toca un botón para continuar 👇"
     )
-    await update.message.reply_text(texto, reply_markup=main_actions_keyboard())
+    is_registered = chat_id_exists(user.id)
+    await update.message.reply_text(texto, reply_markup=main_actions_keyboard(is_registered=is_registered))
 
 async def post_init(application: Application):
     # Mantén los comandos rápidos disponibles en el menú de Telegram
     await application.bot.set_my_commands([
         BotCommand("start", "Mostrar menú principal"),
-        BotCommand("welcome", "Registro de nuevas empleadas"),
+        # BotCommand("welcome", "Registro de nuevas empleadas"), # Se maneja dinámicamente
         BotCommand("vacaciones", "Solicitar vacaciones"),
         BotCommand("permiso", "Solicitar permiso por horas"),
         BotCommand("links", "Links útiles"),

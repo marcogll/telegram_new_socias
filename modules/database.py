@@ -4,9 +4,61 @@ from datetime import datetime
 from sqlalchemy import Column, DateTime, Integer, MetaData, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import gspread
+from google.oauth2.service_account import Credentials
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+# --- GOOGLE SHEETS SETUP ---
+GSHEET_URL = os.getenv("GOOGLE_SHEET_URL")
+GOOGLE_CREDENTIALS_FILE = os.getenv("GOOGLE_CREDENTIALS_FILE", "google_credentials.json")
+SHEET_COLUMN_INDEX = 40  # AN is the 40th column
+
+def get_gsheet_client():
+    """Retorna un cliente de gspread autenticado o None si falla."""
+    if not GSHEET_URL:
+        logging.warning("GOOGLE_SHEET_URL no está configurada. La verificación de duplicados está deshabilitada.")
+        return None
+    
+    if not os.path.exists(GOOGLE_CREDENTIALS_FILE):
+        logging.warning(f"No se encontró el archivo de credenciales '{GOOGLE_CREDENTIALS_FILE}'. La verificación de duplicados está deshabilitada.")
+        return None
+
+    try:
+        scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+        creds = Credentials.from_service_account_file(GOOGLE_CREDENTIALS_FILE, scopes=scopes)
+        client = gspread.authorize(creds)
+        return client
+    except Exception as e:
+        logging.error(f"Error al autenticar con Google Sheets: {e}")
+        return None
+
+def chat_id_exists(chat_id: int) -> bool:
+    """Verifica si un chat_id de Telegram ya existe en la columna AN de la hoja de cálculo."""
+    client = get_gsheet_client()
+    if not client:
+        return False  # Si no hay cliente, no podemos verificar, así que asumimos que no existe.
+
+    try:
+        spreadsheet = client.open_by_url(GSHEET_URL)
+        worksheet = spreadsheet.get_worksheet(0)  # Primera hoja
+        
+        # Obtener todos los valores de la columna AN (índice 40)
+        chat_ids_in_sheet = worksheet.col_values(SHEET_COLUMN_INDEX)
+        
+        # El ID de chat puede venir como número o texto, así que comparamos como string
+        return str(chat_id) in chat_ids_in_sheet
+        
+    except gspread.exceptions.SpreadsheetNotFound:
+        logging.error(f"No se pudo encontrar la hoja de cálculo en la URL proporcionada.")
+        return False
+    except Exception as e:
+        logging.error(f"Error al leer la hoja de cálculo: {e}")
+        return False
+
+
+# --- DATABASE (MySQL) SETUP ---
 
 # Base para los modelos declarativos
 Base = declarative_base()

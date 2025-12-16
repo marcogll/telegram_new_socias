@@ -17,7 +17,7 @@ from telegram.ext import (
     Defaults,
 )
 
-from modules.database import log_request
+from modules.database import log_request, chat_id_exists
 from modules.ui import main_actions_keyboard
 
 # --- 1. CARGA DE ENTORNO ---
@@ -173,8 +173,19 @@ TECLADO_RELACION_EMERGENCIA = ReplyKeyboardMarkup(
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
-    context.user_data.clear()
     log_request(user.id, user.username, "welcome", update.message.text)
+
+    # --- VERIFICACIÓN DE DUPLICADOS ---
+    if chat_id_exists(user.id):
+        await update.message.reply_text(
+            "👩‍💼 Hola de nuevo. Ya tienes un registro activo en nuestro sistema.\n\n"
+            "Si crees que es un error o necesitas hacer cambios, por favor contacta a tu manager o a RH directamente. "
+            "¡Gracias!",
+            reply_markup=main_actions_keyboard()
+        )
+        return ConversationHandler.END
+
+    context.user_data.clear()
     
     context.user_data["metadata"] = {
         "telegram_id": user.id,
