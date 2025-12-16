@@ -17,7 +17,7 @@ from telegram.ext import (
     Defaults,
 )
 
-from modules.database import log_request, chat_id_exists
+from modules.database import log_request, check_user_registration
 from modules.ui import main_actions_keyboard
 
 # --- 1. CARGA DE ENTORNO ---
@@ -171,16 +171,16 @@ TECLADO_RELACION_EMERGENCIA = ReplyKeyboardMarkup(
 
 # --- 5. LOGICA DEL BOT (VANESSA) ---
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def start_onboarding(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
     log_request(user.id, user.username, "welcome", update.message.text)
 
     # --- VERIFICACIÓN DE DUPLICADOS ---
-    if chat_id_exists(user.id):
+    if check_user_registration(user.id):
         await update.message.reply_text(
-            "👩‍💼 Hola de nuevo. Ya tienes un registro activo en nuestro sistema.\n\n"
-            "Si crees que es un error o necesitas hacer cambios, por favor contacta a tu manager o a RH directamente. "
-            "¡Gracias!",
+            "⛔ Error de Registro: Parece que ya estás registrado en nuestros sistemas. "
+            "Si crees que esto es un error y necesitas actualizar tu información, "
+            "por favor repórtalo a sistemas para que te asistan.",
             reply_markup=main_actions_keyboard()
         )
         return ConversationHandler.END
@@ -437,7 +437,7 @@ states[34] = [MessageHandler(filters.TEXT & ~filters.COMMAND, finalizar)]
 
 # Handler listo para importar en main.py
 onboarding_handler = ConversationHandler(
-    entry_points=[CommandHandler("welcome", start)], # Cambiado a /welcome
+    entry_points=[CommandHandler("welcome", start_onboarding)], # Cambiado a /welcome
     states=states, # Tu diccionario de estados
     fallbacks=[CommandHandler("cancelar", cancelar)],
     allow_reentry=True
@@ -448,7 +448,7 @@ def main():
     application = Application.builder().token(TOKEN).defaults(defaults).build()
 
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("contrato", start)],
+        entry_points=[CommandHandler("contrato", start_onboarding)],
         states=states,
         fallbacks=[CommandHandler("cancelar", cancelar)],
     )

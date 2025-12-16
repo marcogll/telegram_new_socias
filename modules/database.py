@@ -1,92 +1,12 @@
 import logging
 import os
 from datetime import datetime
-from sqlalchemy import Column, DateTime, Integer, MetaData, String, create_engine
+from sqlalchemy import Column, DateTime, Integer, MetaData, String, create_engine, BIGINT, Date, INT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import gspread
-from google.oauth2.service_account import Credentials
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
-# --- GOOGLE SHEETS SETUP ---
-GSHEET_URL = os.getenv("GOOGLE_SHEET_URL")
-GOOGLE_CREDENTIALS_FILE = os.getenv("GOOGLE_CREDENTIALS_FILE", "google_credentials.json")
-SHEET_COLUMN_INDEX = 40  # AN is the 40th column
-
-def get_gsheet_client():
-    """Retorna un cliente de gspread autenticado o None si falla."""
-    if not GSHEET_URL:
-        logging.warning("GOOGLE_SHEET_URL no está configurada. La verificación de duplicados está deshabilitada.")
-        return None
-
-    creds = None
-    scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
-
-    # Prioridad 1: Cargar desde variables de entorno
-    gsa_creds_dict = {
-        "type": os.getenv("GSA_TYPE"),
-        "project_id": os.getenv("GSA_PROJECT_ID"),
-        "private_key_id": os.getenv("GSA_PRIVATE_KEY_ID"),
-        "private_key": (os.getenv("GSA_PRIVATE_KEY") or "").replace("\\n", "\n"),
-        "client_email": os.getenv("GSA_CLIENT_EMAIL"),
-        "client_id": os.getenv("GSA_CLIENT_ID"),
-        "auth_uri": os.getenv("GSA_AUTH_URI"),
-        "token_uri": os.getenv("GSA_TOKEN_URI"),
-        "auth_provider_x509_cert_url": os.getenv("GSA_AUTH_PROVIDER_X509_CERT_URL"),
-        "client_x509_cert_url": os.getenv("GSA_CLIENT_X509_CERT_URL"),
-    }
-
-    if all(gsa_creds_dict.values()):
-        try:
-            creds = Credentials.from_service_account_info(gsa_creds_dict, scopes=scopes)
-            logging.info("Autenticando con Google Sheets usando variables de entorno.")
-        except Exception as e:
-            logging.error(f"Error al procesar credenciales de entorno de Google: {e}")
-            return None
-    # Prioridad 2: Cargar desde archivo JSON
-    elif os.path.exists(GOOGLE_CREDENTIALS_FILE):
-        try:
-            creds = Credentials.from_service_account_file(GOOGLE_CREDENTIALS_FILE, scopes=scopes)
-            logging.info(f"Autenticando con Google Sheets usando el archivo '{GOOGLE_CREDENTIALS_FILE}'.")
-        except Exception as e:
-            logging.error(f"Error al procesar el archivo de credenciales '{GOOGLE_CREDENTIALS_FILE}': {e}")
-            return None
-    else:
-        logging.warning("No se encontraron credenciales de Google (ni por variables de entorno ni por archivo). La verificación de duplicados está deshabilitada.")
-        return None
-
-    try:
-        client = gspread.authorize(creds)
-        return client
-    except Exception as e:
-        logging.error(f"Error al autorizar cliente de gspread: {e}")
-        return None
-
-def chat_id_exists(chat_id: int) -> bool:
-    """Verifica si un chat_id de Telegram ya existe en la columna AN de la hoja de cálculo."""
-    client = get_gsheet_client()
-    if not client:
-        return False  # Si no hay cliente, no podemos verificar, así que asumimos que no existe.
-
-    try:
-        spreadsheet = client.open_by_url(GSHEET_URL)
-        worksheet = spreadsheet.get_worksheet(0)  # Primera hoja
-        
-        # Obtener todos los valores de la columna AN (índice 40)
-        chat_ids_in_sheet = worksheet.col_values(SHEET_COLUMN_INDEX)
-        
-        # El ID de chat puede venir como número o texto, así que comparamos como string
-        return str(chat_id) in chat_ids_in_sheet
-        
-    except gspread.exceptions.SpreadsheetNotFound:
-        logging.error(f"No se pudo encontrar la hoja de cálculo en la URL proporcionada.")
-        return False
-    except Exception as e:
-        logging.error(f"Error al leer la hoja de cálculo: {e}")
-        return False
-
 
 # --- DATABASE (MySQL) SETUP ---
 
@@ -103,6 +23,57 @@ class RequestLog(Base):
     message = Column(String(500))
     created_at = Column(DateTime, default=datetime.utcnow)
 
+# Clase que mapea a la tabla de datos de RRHH
+class FullHRData(Base):
+    __tablename__ = 'full_HRdata'
+    __table_args__ = {'schema': 'vanessa_logs'}
+    numero_empleado = Column(String(15), primary_key=True, nullable=False)
+    puesto = Column(String(50))
+    sucursal = Column(String(50))
+    fecha_ingreso = Column(Date, nullable=False)
+    estatus = Column(String(15))
+    nombre_completo = Column(String(150))
+    nombre = Column(String(50), nullable=False)
+    nombre_preferido = Column(String(50))
+    apellido_paterno = Column(String(50), nullable=False)
+    apellido_materno = Column(String(50))
+    fecha_nacimiento = Column(Date)
+    lugar_nacimiento = Column(String(50))
+    rfc = Column(String(13), nullable=False, unique=True)
+    curp = Column(String(18), nullable=False, unique=True)
+    email = Column(String(100), unique=True)
+    telefono_celular = Column(String(15))
+    domicilio_calle = Column(String(255))
+    domicilio_numero_exterior = Column(String(10))
+    domicilio_numero_interior = Column(String(10))
+    domicilio_numero_texto = Column(String(50))
+    domicilio_colonia = Column(String(255))
+    domicilio_codigo_postal = Column(String(10))
+    domicilio_ciudad = Column(String(100))
+    domicilio_estado = Column(String(50))
+    domicilio_completo = Column(String(255))
+    emergencia_nombre = Column(String(100))
+    emergencia_telefono = Column(String(15))
+    emergencia_parentesco = Column(String(50))
+    referencia_1_nombre = Column(String(100))
+    referencia_1_telefono = Column(String(15))
+    referencia_1_tipo = Column(String(20))
+    referencia_2_nombre = Column(String(100))
+    referencia_2_telefono = Column(String(15))
+    referencia_2_tipo = Column(String(20))
+    referencia_3_nombre = Column(String(100))
+    referencia_3_telefono = Column(String(15))
+    referencia_3_tipo = Column(String(20))
+    origen_registro = Column(String(50))
+    telegram_usuario = Column(String(50))
+    telegram_chat_id = Column(BIGINT)
+    bot_version = Column(String(20))
+    fecha_registro = Column(DateTime)
+    tiempo_registro_minutos = Column(INT)
+    interacciones_bot = Column(INT)
+    fecha_procesamiento = Column(DateTime(timezone=True))
+
+
 def _build_engine():
     """Crea un engine de SQLAlchemy si hay variables de entorno suficientes."""
     user = os.getenv("MYSQL_USER")
@@ -111,14 +82,14 @@ def _build_engine():
     host = os.getenv("MYSQL_HOST") or "db"  # Permitimos override para uso local
 
     if not all([user, password, database]):
-        logging.warning("DB logging deshabilitado: faltan MYSQL_USER/MYSQL_PASSWORD/MYSQL_DATABASE.")
+        logging.warning("DB connection disabled: MYSQL_USER/MYSQL_PASSWORD/MYSQL_DATABASE are missing.")
         return None
 
     try:
         db_url = f"mysql+mysqlconnector://{user}:{password}@{host}:3306/{database}"
         return create_engine(db_url, pool_pre_ping=True)
     except Exception as exc:
-        logging.error(f"No se pudo crear el engine de base de datos: {exc}")
+        logging.error(f"Could not create database engine: {exc}")
         return None
 
 def _disable_db_logging(reason: str):
@@ -126,7 +97,7 @@ def _disable_db_logging(reason: str):
     global engine, SessionLocal
     engine = None
     SessionLocal = None
-    logging.warning(f"DB logging deshabilitado: {reason}")
+    logging.warning(f"DB logging disabled: {reason}")
 
 # Crear el engine y sesión si es posible
 engine = _build_engine()
@@ -135,30 +106,49 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine) if e
 
 # Función para inicializar la base de datos
 def init_db():
-    global engine, SessionLocal
+    global engine
     if not engine:
         return
     try:
-        logging.info("Inicializando la base de datos y creando tablas si no existen...")
+        logging.info("Initializing the database and creating tables if they do not exist...")
         Base.metadata.create_all(bind=engine)
-        logging.info("Tablas verificadas/creadas correctamente.")
+        logging.info("Tables verified/created successfully.")
     except Exception as e:
-        logging.error(f"Error al inicializar la base de datos: {e}")
-        _disable_db_logging("no se pudo inicializar la base de datos (se omitirán logs).")
-        # No propagamos para que el bot pueda seguir levantando aunque no haya DB
+        logging.error(f"Error initializing the database: {e}")
+        _disable_db_logging("could not initialize database (logging will be skipped).")
+
+def check_user_registration(chat_id: int) -> bool:
+    """
+    Verifica si un telegram_chat_id ya existe en la tabla full_HRdata.
+    Retorna True si el usuario ya está registrado, False en caso contrario.
+    """
+    if not SessionLocal:
+        logging.warning("DB check skipped (DB not configured). Assuming user is not registered.")
+        return False
+
+    db_session = SessionLocal()
+    try:
+        count = db_session.query(FullHRData).filter(FullHRData.telegram_chat_id == chat_id).count()
+        if count > 0:
+            logging.info(f"User with chat_id {chat_id} is already registered.")
+            return True
+        else:
+            logging.info(f"User with chat_id {chat_id} is not registered.")
+            return False
+    except Exception as e:
+        logging.error(f"Error checking user registration for chat_id {chat_id}: {e}")
+        # En caso de error, es más seguro asumir que no está registrado para no bloquear a un usuario legítimo.
+        return False
+    finally:
+        db_session.close()
 
 # Función para registrar una solicitud en la base de datos
 def log_request(telegram_id, username, command, message):
     if not SessionLocal:
-        logging.debug("Log de DB omitido (DB no configurada).")
+        logging.debug("DB log skipped (DB not configured).")
         return
 
-    try:
-        db_session = SessionLocal()
-    except Exception as exc:
-        logging.error(f"No se pudo crear sesión DB, se deshabilita el log: {exc}")
-        _disable_db_logging("no se pudo abrir sesión")
-        return
+    db_session = SessionLocal()
     try:
         log_entry = RequestLog(
             telegram_id=str(telegram_id),
@@ -168,9 +158,9 @@ def log_request(telegram_id, username, command, message):
         )
         db_session.add(log_entry)
         db_session.commit()
-        logging.info(f"Log guardado: {command} de {username}")
+        logging.info(f"Log saved: {command} from {username}")
     except Exception as e:
-        logging.error(f"Error al guardar el log: {e}")
+        logging.error(f"Error saving log: {e}")
         db_session.rollback()
     finally:
         db_session.close()
