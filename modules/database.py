@@ -20,18 +20,48 @@ def get_gsheet_client():
     if not GSHEET_URL:
         logging.warning("GOOGLE_SHEET_URL no está configurada. La verificación de duplicados está deshabilitada.")
         return None
-    
-    if not os.path.exists(GOOGLE_CREDENTIALS_FILE):
-        logging.warning(f"No se encontró el archivo de credenciales '{GOOGLE_CREDENTIALS_FILE}'. La verificación de duplicados está deshabilitada.")
+
+    creds = None
+    scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+
+    # Prioridad 1: Cargar desde variables de entorno
+    gsa_creds_dict = {
+        "type": os.getenv("GSA_TYPE"),
+        "project_id": os.getenv("GSA_PROJECT_ID"),
+        "private_key_id": os.getenv("GSA_PRIVATE_KEY_ID"),
+        "private_key": (os.getenv("GSA_PRIVATE_KEY") or "").replace("\\n", "\n"),
+        "client_email": os.getenv("GSA_CLIENT_EMAIL"),
+        "client_id": os.getenv("GSA_CLIENT_ID"),
+        "auth_uri": os.getenv("GSA_AUTH_URI"),
+        "token_uri": os.getenv("GSA_TOKEN_URI"),
+        "auth_provider_x509_cert_url": os.getenv("GSA_AUTH_PROVIDER_X509_CERT_URL"),
+        "client_x509_cert_url": os.getenv("GSA_CLIENT_X509_CERT_URL"),
+    }
+
+    if all(gsa_creds_dict.values()):
+        try:
+            creds = Credentials.from_service_account_info(gsa_creds_dict, scopes=scopes)
+            logging.info("Autenticando con Google Sheets usando variables de entorno.")
+        except Exception as e:
+            logging.error(f"Error al procesar credenciales de entorno de Google: {e}")
+            return None
+    # Prioridad 2: Cargar desde archivo JSON
+    elif os.path.exists(GOOGLE_CREDENTIALS_FILE):
+        try:
+            creds = Credentials.from_service_account_file(GOOGLE_CREDENTIALS_FILE, scopes=scopes)
+            logging.info(f"Autenticando con Google Sheets usando el archivo '{GOOGLE_CREDENTIALS_FILE}'.")
+        except Exception as e:
+            logging.error(f"Error al procesar el archivo de credenciales '{GOOGLE_CREDENTIALS_FILE}': {e}")
+            return None
+    else:
+        logging.warning("No se encontraron credenciales de Google (ni por variables de entorno ni por archivo). La verificación de duplicados está deshabilitada.")
         return None
 
     try:
-        scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
-        creds = Credentials.from_service_account_file(GOOGLE_CREDENTIALS_FILE, scopes=scopes)
         client = gspread.authorize(creds)
         return client
     except Exception as e:
-        logging.error(f"Error al autenticar con Google Sheets: {e}")
+        logging.error(f"Error al autorizar cliente de gspread: {e}")
         return None
 
 def chat_id_exists(chat_id: int) -> bool:
