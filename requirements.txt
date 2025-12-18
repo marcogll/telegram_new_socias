@@ -5,5 +5,3 @@ SQLAlchemy
 mysql-connector-python
 google-generativeai
 openai
-gspread
-google-auth-oauthlib

@@ -18,7 +18,7 @@ from telegram.ext import (
 )
 
 from modules.logger import log_request
-from modules.database import chat_id_exists
+from modules.database import chat_id_exists, register_user
 from modules.ui import main_actions_keyboard
 
 # --- 1. CARGA DE ENTORNO ---
@@ -403,6 +403,19 @@ async def finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             logging.info(f"Webhook enviado exitosamente a: {url}")
         except Exception as e:
             logging.error(f"Error enviando webhook a {url}: {e}")
+
+    # --- REGISTRO EN BASE DE DATOS ---
+    db_ok = register_user({
+        **meta,
+        **payload["metadata"],
+        **payload["candidato"],
+        **payload["contacto"]
+    })
+    
+    if db_ok:
+        logging.info(f"Usuario {meta['chat_id']} registrado en la base de datos.")
+    else:
+        logging.error(f"Fallo al registrar usuario {meta['chat_id']} en la base de datos.")
 
     if enviado:
         await update.message.reply_text(

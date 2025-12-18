@@ -1,6 +1,6 @@
 # 🤖 Vanessa Bot – Asistente de RH para Vanity
 
-Vanessa es un bot de Telegram escrito en Python que automatiza procesos internos de Recursos Humanos en Vanity. Su objetivo es eliminar fricción operativa: onboarding y solicitudes de RH, todo orquestado desde Telegram y conectado a flujos de n8n o servicios de correo.
+Vanessa es un bot de Telegram escrito en Python que automatiza procesos internos de Recursos Humanos en Vanity. Su objetivo es eliminar fricción operativa: onboarding y solicitudes de RH, todo orquestado desde Telegram y conectado a flujos de n8n, servicios de correo y bases de datos MySQL.
 
 Este repositorio está pensado como **proyecto Python profesional**, modular y listo para correr 24/7 en producción.
 
@@ -10,11 +10,11 @@ Este repositorio está pensado como **proyecto Python profesional**, modular y l
 
 Vanessa no es un chatbot genérico: es una interfaz conversacional para procesos reales de negocio.
 
-- Onboarding completo de nuevas socias (`/welcome`)
-- Solicitud de vacaciones (`/vacaciones`)
-- Solicitud de permisos por horas (`/permiso`)
+- **Onboarding completo de nuevas socias (`/welcome`)**: Recolecta datos, valida que no existan duplicados en la DB, registra a la usuaria en `USERS_ALMA` y envía los datos a n8n.
+- **Solicitud de vacaciones (`/vacaciones`)**: Flujo dinámico para gestionar días de descanso.
+- **Solicitud de permisos por horas (`/permiso`)**: Incluye clasificación de motivos mediante IA (Gemini).
 
-Cada flujo es un módulo independiente, y los datos se envían a **webhooks de n8n**.
+Cada flujo es un módulo independiente que interactúa con la base de datos y flujos de **n8n**.
 
 ---
 
@@ -31,124 +31,91 @@ vanity_bot/
 ├── docker-compose.yml    # Orquestación de servicios (bot + db)
 ├── README.md             # Este documento
 │
+├── models/               # Modelos de base de datos (SQLAlchemy)
+│   ├── users_alma_models.py
+│   ├── vanity_hr_models.py
+│   └── vanity_attendance_models.py
+│
 └── modules/              # Habilidades del bot
-    ├── __init__.py
-    ├── database.py       # Módulo de conexión a la base de datos
-    ├── onboarding.py     # Flujo /welcome (onboarding RH)
-    └── rh_requests.py    # /vacaciones y /permiso
+    ├── ai.py             # Clasificación de motivos con Gemini
+    ├── database.py       # Conexión a DB y lógica de negocio (registro/verificación)
+    ├── logger.py         # Registro de auditoría
+    ├── onboarding.py     # Flujo /welcome
+    ├── rh_requests.py    # /vacaciones y /permiso
+    └── ui.py             # Teclados y componentes de interfaz
 ```
 
 ---
 
 ## 🔐 Configuración (.env)
 
-Copia el archivo `.env.example` a `.env` y rellena los valores correspondientes. Este archivo es ignorado por Git para proteger tus credenciales.
+Vanessa utiliza múltiples bases de datos y webhooks. Asegúrate de configurar correctamente los nombres de las bases de datos.
 
-```
+```ini
 # --- TELEGRAM ---
 TELEGRAM_TOKEN=TU_TOKEN_AQUI
 
+# --- AI (Gemini) ---
+GOOGLE_API_KEY=AIzaSy...
+
 # --- WEBHOOKS N8N ---
-WEBHOOK_ONBOARDING=https://...   # Alias aceptado: WEBHOOK_CONTRATO
+WEBHOOK_ONBOARDING=https://...
 WEBHOOK_VACACIONES=https://...
 WEBHOOK_PERMISOS=https://...
 
-# --- DATABASE ---
-# Usado por el servicio de la base de datos en docker-compose.yml
-MYSQL_DATABASE=vanessa_logs
+# --- DATABASE SETUP ---
+MYSQL_HOST=db
 MYSQL_USER=user
 MYSQL_PASSWORD=password
 MYSQL_ROOT_PASSWORD=rootpassword
 
+# Nombres de las Bases de Datos
+MYSQL_DATABASE_USERS_ALMA=USERS_ALMA
+MYSQL_DATABASE_VANITY_HR=vanity_hr
+MYSQL_DATABASE_VANITY_ATTENDANCE=vanity_attendance
 ```
 
 ---
 
 ## 🐳 Ejecución con Docker (Recomendado)
 
-El proyecto está dockerizado para facilitar su despliegue.
+El proyecto está dockerizado para facilitar su despliegue y aislamiento.
 
 ### 1. Pre-requisitos
-- Docker
-- Docker Compose
+- Docker y Docker Compose instalaros.
 
 ### 2. Levantar los servicios
-Con el archivo `.env` ya configurado, simplemente ejecuta:
 ```bash
-docker-compose up --build
+docker-compose up --build -d
 ```
-Este comando construirá la imagen del bot, descargará la imagen de MySQL, y lanzará ambos servicios. `docker-compose` leerá las variables del archivo `.env` para configurar los contenedores.
-
-### 3. Detener los servicios
-Para detener los contenedores, presiona `Ctrl+C` en la terminal donde se están ejecutando, o ejecuta desde otro terminal:
-```bash
-docker-compose down
-```
-
-### 4. Despliegue con imagen pre-construida (Collify)
-Si Collify solo consume imágenes ya publicadas, usa el archivo `docker-compose.collify.yml` que apunta a una imagen en registro (`DOCKER_IMAGE`).
-
-1) Construir y publicar la imagen (ejemplo con Buildx y tag con timestamp):
-```bash
-export DOCKER_IMAGE=marcogll/vanessa-bot:prod-$(date +%Y%m%d%H%M)
-docker buildx build --platform linux/amd64 -t $DOCKER_IMAGE . --push
-```
-
-2) Desplegar en el servidor (Collify) usando la imagen publicada:
-```bash
-export DOCKER_IMAGE=marcogll/vanessa-bot:prod-20240101
-docker compose -f docker-compose.collify.yml pull
-docker compose -f docker-compose.collify.yml up -d
-```
-`docker-compose.collify.yml` usa `env_file: .env`, así que carga las credenciales igual que en local o configúralas como variables de entorno en la plataforma.
+Este comando levantará el bot y un contenedor de MySQL (si se usa el compose por defecto). El bot se reconectará automáticamente a la DB si esta tarda en iniciar.
 
 ---
 
 ## 🧩 Arquitectura Interna
 
 ### main.py (El Cerebro)
-- Inicializa el bot de Telegram
-- Carga variables de entorno
-- Registra los handlers de cada módulo
-- Define el menú principal (`/start`, `/help`)
+- Inicializa el bot de Telegram y carga variables de entorno.
+- Registra los handlers de cada módulo y define el menú principal y comandos persistentes.
 
 ### modules/database.py
-- Gestiona la conexión a la base de datos MySQL con SQLAlchemy.
-- Define el modelo `RequestLog` para la tabla de logs.
-- Provee la función `log_request` para registrar interacciones.
+- Centraliza la conexión a las 3 bases de datos (`USERS_ALMA`, `vanity_hr`, `vanity_attendance`).
+- **Verificación de duplicados**: Ya no usa Google Sheets; ahora verifica el `telegram_id` directamente en la tabla `users`.
+- **Registro de usuarias**: Función `register_user` para insertar candidatas tras el onboarding.
 
 ### modules/onboarding.py
-Flujo conversacional complejo que recolecta datos de nuevas empleadas y los envía a un webhook de n8n.
-Incluye derivadas útiles: `num_ext_texto` (número en letras, con interior) y `numero_empleado` (primeras 4 del CURP + fecha de ingreso).
+Recolección exhaustiva de datos. Al finalizar:
+1. Valida y formatea datos (RFC, CURP, fechas).
+2. Registra a la empleada en la base de datos MySQL.
+3. Envía el payload completo al webhook de n8n para generación de contratos.
 
-### modules/rh_requests.py
-- Maneja solicitudes simples de RH (Vacaciones y Permisos) y las envía a un webhook de n8n.
-- Vacaciones: pregunta año (actual o siguiente), día/mes de inicio y fin, calcula métricas y aplica semáforo automático.
-- Permisos: ofrece accesos rápidos (hoy/mañana/pasado) o fecha específica (año actual/siguiente, día/mes), pide horario, clasifica motivo con IA y envía al webhook.
-
----
-
-## 🧠 Filosofía del Proyecto
-
-- **Telegram como UI**: Interfaz conversacional accesible para todos.
-- **Python como cerebro**: Lógica de negocio y orquestación.
-- **Docker para despliegue**: Entornos consistentes y portátiles.
-- **MySQL para persistencia**: Registro auditable de todas las interacciones.
-- **Modularidad total**: Cada habilidad es un componente independiente.
-
----
-
-## 🧪 Estado del Proyecto
-
-✔ Funcional en producción
-✔ Modular
-✔ Escalable
-✔ Auditable
-
-Vanessa está viva. Y aprende con cada flujo nuevo.
+### modules/ai.py & modules/rh_requests.py
+Integración con **Google Gemini** para clasificar automáticamente los motivos de los permisos (Médico, Trámite, etc.) y envío sincronizado a webhooks de gestión humana.
 
 ---
 
 ## 🗒️ Registro de versiones
 
-- **1.2 (2025-01-25)** — Onboarding: selector de año 2020–2026; `numero_empleado` incluye prefijo CURP (4 chars) + fecha de ingreso; vacaciones/permiso ajustan fin automático al siguiente año cuando aplica.
+- **1.3 (2025-12-18)** — **Adiós Google Sheets**: Migración total a base de datos MySQL para verificación de existencia y registro de nuevas socias. Limpieza de `.env` y optimización de arquitectura de modelos.
+- **1.2 (2025-01-25)** — Onboarding: selector de año 2020–2026; `numero_empleado` dinámico; mejoras en flujos de vacaciones/permiso.
+- **1.1** — Implementación inicial de webhooks y Docker.
