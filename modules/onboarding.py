@@ -17,7 +17,8 @@ from telegram.ext import (
     Defaults,
 )
 
-from modules.database import log_request, chat_id_exists
+from modules.logger import log_request
+from modules.database import chat_id_exists
 from modules.ui import main_actions_keyboard
 
 # --- 1. CARGA DE ENTORNO ---

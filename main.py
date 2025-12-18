@@ -18,7 +18,8 @@ from telegram.ext import Application, Defaults, CommandHandler, ContextTypes
 # --- IMPORTAR HABILIDADES ---
 from modules.onboarding import onboarding_handler
 from modules.rh_requests import vacaciones_handler, permiso_handler
-from modules.database import log_request, chat_id_exists # Importar chat_id_exists
+from modules.logger import log_request
+from modules.database import chat_id_exists # Importar chat_id_exists
 from modules.ui import main_actions_keyboard
 # from modules.finder import finder_handler (Si lo creas después)
 

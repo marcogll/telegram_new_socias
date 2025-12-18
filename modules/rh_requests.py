@@ -5,7 +5,7 @@ import string
 from datetime import datetime, date
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import CommandHandler, ContextTypes, ConversationHandler, MessageHandler, filters
-from modules.database import log_request
+from modules.logger import log_request
 from modules.ui import main_actions_keyboard
 from modules.ai import classify_reason
 

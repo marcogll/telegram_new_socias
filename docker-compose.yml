@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   bot:
-    image: marcogll/vanessa-bot:1.2
+    build: .
     container_name: vanessa_bot
     restart: always
     env_file:
@@ -11,7 +11,6 @@ services:
       - MYSQL_HOST=db
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
     depends_on:
       db:
         condition: service_healthy
@@ -23,7 +22,6 @@ services:
     container_name: vanessa_db
     restart: always
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -34,6 +32,7 @@ services:
       retries: 6
       start_period: 30s
     volumes:
+      - ./db/init:/docker-entrypoint-initdb.d
       - mysql_data:/var/lib/mysql
     ports:
       - "3306:3306"
