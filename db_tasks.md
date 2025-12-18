@@ -1,101 +1,219 @@
-# Definición de Tablas y Campos para la Base de Datos
+# Sistema Integrado de Gestión (Vanity)
 
-Este documento describe la estructura de la base de datos para el bot Vanessa, diseñada para gestionar la información de empleadas, solicitudes y permisos de forma detallada.
+Este repositorio documenta la **especificación técnica completa** del ecosistema Vanity: infraestructura de datos, diccionarios de campos sin truncar, relaciones entre entidades y reglas de negocio que gobiernan los Bots, Recursos Humanos y el sistema de Asistencia.
 
-## 1. Tabla de Usuarias (`users`)
+El objetivo es servir como **fuente de verdad técnica** para desarrollo, mantenimiento, auditoría y escalamiento.
 
-Almacena la información central, el estado y el balance de vacaciones de cada empleada.
+---
 
-| Campo                    | Tipo                          | Descripción                                                              |
-|--------------------------|-------------------------------|--------------------------------------------------------------------------|
-| `id`                     | `INT` (PK)                    | Identificador único de la usuaria.                                       |
-| `employee_number`        | `VARCHAR(50)` (Unique)        | Número de empleada único.                                                |
-| `telegram_id`            | `BIGINT` (Unique)             | ID de Telegram de la usuaria.                                            |
-| `telegram_username`      | `VARCHAR(255)`                | Nombre de usuario de Telegram.                                           |
-| `full_name`              | `VARCHAR(255)`                | Nombre completo.                                                         |
-| `preferred_name`         | `VARCHAR(100)`                | Nombre preferido de la empleada.                                         |
-| `email`                  | `VARCHAR(255)` (Unique)       | Correo electrónico.                                                      |
-| `phone_number`           | `VARCHAR(20)`                 | Teléfono celular.                                                        |
-| `position`               | `VARCHAR(100)`                | Puesto que desempeña.                                                    |
-| `branch`                 | `VARCHAR(100)`                | Sucursal a la que pertenece.                                             |
-| `hire_date`              | `DATE`                        | Fecha de ingreso a la empresa.                                           |
-| `status`                 | `ENUM('activo', 'inactivo')`  | Estatus actual de la empleada.                                           |
-| `role`                   | `ENUM('user', 'manager', 'admin')` | Nivel de permisos en el sistema (por defecto: 'user').                   |
-| `vacation_days_assigned` | `INT`                         | Días de vacaciones asignados para el periodo actual.                     |
-| `vacation_days_taken`    | `INT` (Default: 0)            | Suma de días de vacaciones aprobados y tomados.                          |
-| `created_at`             | `DATETIME`                    | Fecha de creación del registro.                                          |
-| `updated_at`             | `DATETIME`                    | Fecha de última actualización.                                           |
+## 1. Arquitectura de Datos
 
-## 2. Tabla de Solicitudes de Vacaciones (`vacations`)
+El sistema se distribuye en **tres bases de datos** dentro del mismo servidor, permitiendo integridad referencial y consultas cruzadas controladas:
 
-Registro detallado de las solicitudes de vacaciones.
+* **USERS_ALMA** → Seguridad, autenticación y control de acceso.
+* **vanity_hr** → Gestión de personal, vacaciones, permisos y reglas laborales.
+* **vanity_attendance** → Control de asistencia y programación de horarios.
 
-| Campo               | Tipo                               | Descripción                                                              |
-|---------------------|------------------------------------|--------------------------------------------------------------------------|
-| `id`                | `INT` (PK)                         | Identificador numérico de la solicitud.                                  |
-| `request_id`        | `VARCHAR(50)` (Unique)             | Identificador alfanumérico único de la solicitud (e.g., "7c32a085...").  |
-| `user_id`           | `INT` (FK)                         | Empleada que solicita (`users.id`).                                      |
-| `status`            | `ENUM('pendiente', 'aprobado', 'rechazado')` | Estado actual de la solicitud.                                           |
-| `start_date`        | `DATE`                             | Fecha de inicio de las vacaciones.                                       |
-| `end_date`          | `DATE`                             | Fecha de fin de las vacaciones.                                          |
-| `requested_days`    | `INT`                              | Número de días naturales solicitados.                                    |
-| `business_days`     | `INT`                              | Número de días hábiles que abarca la solicitud.                          |
-| `reason`            | `TEXT`                             | Motivo de la solicitud.                                                  |
-| `with_pay`          | `BOOLEAN`                          | `TRUE` si es con goce de sueldo.                                         |
-| `leave_type`        | `ENUM('con_goce', 'sin_goce')`     | Clasificación del tipo de permiso.                                       |
-| `request_date`      | `DATETIME`                         | Fecha y hora en que se creó la solicitud.                                |
-| `processed_date`    | `DATETIME`                         | Fecha y hora en que se procesó en el sistema (e.g., envío a webhook).    |
-| `source`            | `VARCHAR(50)`                      | Origen de la solicitud (e.g., "telegram_bot").                           |
-| `approver_id`       | `INT` (FK, nullable)               | Usuario (`users.id`) que aprobó o rechazó.                               |
-| `approval_date`     | `DATETIME` (nullable)              | Fecha y hora de la aprobación o rechazo.                                 |
-| `approver_comments` | `TEXT` (nullable)                  | Comentarios del aprobador.                                               |
-| `affects_payroll`   | `BOOLEAN`                          | `TRUE` si la solicitud tiene implicaciones en la nómina.                 |
+---
 
-## 3. Tabla de Solicitudes de Permisos por Horas (`permission_requests`)
+## 2. Diccionario de Datos
 
-Registro detallado de permisos especiales por horas.
+### 2.1 Base de Datos: `vanity_hr`
 
-| Campo               | Tipo                               | Descripción                                                              |
-|---------------------|------------------------------------|--------------------------------------------------------------------------|
-| `id`                | `INT` (PK)                         | Identificador numérico del permiso.                                      |
-| `request_id`        | `VARCHAR(50)` (Unique)             | Identificador alfanumérico único (e.g., "1LSRADeDNfY").                  |
-| `user_id`           | `INT` (FK)                         | Empleada que solicita (`users.id`).                                      |
-| `category`          | `VARCHAR(100)`                     | Categoría del permiso (e.g., "PERSONAL", "MÉDICO").                      |
-| `status`            | `ENUM('pendiente', 'aprobado', 'rechazado')` | Estado actual del permiso.                                               |
-| `permission_date`   | `DATE`                             | Fecha para la cual se solicita el permiso.                               |
-| `start_time`        | `TIME`                             | Hora de inicio del permiso.                                              |
-| `end_time`          | `TIME`                             | Hora de fin del permiso.                                                 |
-| `reason`            | `TEXT`                             | Motivo detallado del permiso.                                            |
-| `with_pay`          | `BOOLEAN`                          | `TRUE` si es con goce de sueldo.                                         |
-| `leave_type`        | `ENUM('con_goce', 'sin_goce')`     | Clasificación del tipo de permiso.                                       |
-| `request_date`      | `DATETIME`                         | Fecha y hora en que se creó la solicitud.                                |
-| `processed_date`    | `DATETIME`                         | Fecha y hora en que se procesó.                                          |
-| `source`            | `VARCHAR(50)`                      | Origen de la solicitud.                                                  |
-| `approver_id`       | `INT` (FK, nullable)               | Usuario (`users.id`) que gestionó el permiso.                            |
-| `approval_date`     | `DATETIME` (nullable)              | Fecha y hora de la gestión.                                              |
-| `approver_comments` | `TEXT` (nullable)                  | Comentarios del aprobador.                                               |
-| `affects_payroll`   | `BOOLEAN`                          | `TRUE` si el permiso tiene implicaciones en la nómina.                   |
+#### Tabla: `data_empleadas` (Maestra — 44 campos)
 
-## 4. Interacción con la Base de Datos y Lógica de Negocio
+Tabla central de Recursos Humanos. Contiene información contractual, personal, de contacto y metadatos de registro.
 
-### a. Sistema de Roles
+| Campo                     | Tipo         | Key | Descripción                        |
+| ------------------------- | ------------ | --- | ---------------------------------- |
+| numero_empleado           | varchar(15)  | PRI | ID único de nómina                 |
+| puesto                    | varchar(50)  |     | Cargo / Puesto                     |
+| sucursal                  | varchar(50)  |     | Sucursal asignada                  |
+| fecha_ingreso             | date         |     | Fecha de alta (base de antigüedad) |
+| estatus                   | varchar(15)  |     | Activo / Baja                      |
+| nombre_completo           | varchar(150) |     | Nombre completo concatenado        |
+| nombre                    | varchar(50)  |     | Nombre(s)                          |
+| nombre_preferido          | varchar(50)  |     | Apodo o nombre de preferencia      |
+| apellido_paterno          | varchar(50)  |     | Primer apellido                    |
+| apellido_materno          | varchar(50)  |     | Segundo apellido                   |
+| fecha_nacimiento          | date         |     | Fecha de nacimiento                |
+| lugar_nacimiento          | varchar(50)  |     | Ciudad / Estado                    |
+| rfc                       | varchar(13)  | UNI | RFC                                |
+| curp                      | varchar(18)  | UNI | CURP                               |
+| email                     | varchar(100) |     | Correo electrónico                 |
+| telefono_celular          | varchar(15)  |     | Teléfono móvil                     |
+| domicilio_calle           | varchar(255) |     | Calle                              |
+| domicilio_numero_exterior | varchar(10)  |     | Número exterior                    |
+| domicilio_numero_interior | varchar(10)  |     | Número interior                    |
+| domicilio_numero_texto    | varchar(50)  |     | Referencias                        |
+| domicilio_colonia         | varchar(255) |     | Colonia                            |
+| domicilio_codigo_postal   | varchar(10)  |     | CP                                 |
+| domicilio_ciudad          | varchar(100) |     | Ciudad                             |
+| domicilio_estado          | varchar(50)  |     | Estado                             |
+| domicilio_completo        | varchar(255) |     | Dirección formateada               |
+| emergencia_nombre         | varchar(100) |     | Contacto de emergencia             |
+| emergencia_telefono       | varchar(15)  |     | Teléfono de emergencia             |
+| emergencia_parentesco     | varchar(50)  |     | Parentesco                         |
+| referencia_1_nombre       | varchar(100) |     | Referencia 1                       |
+| referencia_1_telefono     | varchar(15)  |     | Teléfono ref 1                     |
+| referencia_1_tipo         | varchar(20)  |     | Tipo ref 1                         |
+| referencia_2_nombre       | varchar(100) |     | Referencia 2                       |
+| referencia_2_telefono     | varchar(15)  |     | Teléfono ref 2                     |
+| referencia_2_tipo         | varchar(20)  |     | Tipo ref 2                         |
+| referencia_3_nombre       | varchar(100) |     | Referencia 3                       |
+| referencia_3_telefono     | varchar(15)  |     | Teléfono ref 3                     |
+| referencia_3_tipo         | varchar(20)  |     | Tipo ref 3                         |
+| origen_registro           | varchar(50)  |     | Web / Bot                          |
+| telegram_usuario          | varchar(50)  |     | Username Telegram                  |
+| telegram_chat_id          | bigint       |     | ID de chat Telegram                |
+| bot_version               | varchar(20)  |     | Versión del bot                    |
+| fecha_registro            | datetime     |     | Timestamp creación                 |
+| tiempo_registro_minutos   | int          |     | Duración del registro              |
+| fecha_procesamiento       | datetime(3)  |     | Timestamp procesado                |
 
-- **`user`**: Rol estándar para todas las empleadas. Pueden solicitar vacaciones y permisos, y consultar su propio estado.
-- **`manager`**: Puede realizar las mismas acciones que un `user`, y adicionalmente, aprobar/rechazar solicitudes y consultar datos de las usuarias a su cargo.
-- **`admin`**: Acceso total. Puede gestionar todos los datos de todas las usuarias y solicitudes.
+---
 
-### b. Flujo de Solicitudes (Vacaciones y Permisos)
+#### Tabla: `vacaciones` (14 campos)
 
-1.  **Creación**: Una usuaria crea una solicitud. El sistema la inserta en la tabla `vacations` o `permission_requests` con estado `'pendiente'`.
-2.  **Aprobación**: Un `manager` o `admin` revisa la solicitud. Al aprobarla:
-    *   El `status` de la solicitud cambia a `'aprobado'`.
-    *   Se registran el `approver_id`, `approval_date` y `approver_comments`.
-3.  **Actualización de Balance de Vacaciones**:
-    *   **Si la solicitud es de vacaciones y fue aprobada**: El sistema debe sumar los `business_days` de la solicitud al campo `vacation_days_taken` de la usuaria en la tabla `users`.
-    *   Esta lógica asegura que el balance de días tomados siempre esté sincronizado con los registros aprobados.
+| Campo               | Tipo        | Key | Descripción                                  |
+| ------------------- | ----------- | --- | -------------------------------------------- |
+| vacaciones_id       | varchar(50) | PRI | ID de solicitud                              |
+| numero_empleado     | varchar(15) | MUL | Relación con empleada                        |
+| tipo_solicitud      | varchar(20) |     | VACACIONES                                   |
+| estatus             | enum        |     | pendiente / aprobado / rechazado / cancelado |
+| fecha_inicio        | date        |     | Inicio                                       |
+| fecha_fin           | date        |     | Fin                                          |
+| dias_solicitados    | int         |     | Total días                                   |
+| dias_habiles        | int         |     | Días descontados                             |
+| motivo              | text        |     | Observaciones                                |
+| con_goce_sueldo     | tinyint(1)  |     | 1 = Sí                                       |
+| fecha_solicitud     | datetime    |     | Creación                                     |
+| fecha_procesamiento | datetime(3) |     | Cambio de estatus                            |
+| origen              | varchar(20) |     | telegram_bot / web                           |
+| afecta_nomina       | tinyint(1)  |     | Impacto en pago                              |
 
-### c. Lógica de Negocio Clave
+---
 
-- **Balance de Vacaciones**: El balance de días disponibles de una empleada se calcula en tiempo real como `vacation_days_assigned` - `vacation_days_taken`.
-- **Nómina**: El campo `affects_payroll` sirve como una bandera para que los sistemas externos de RRHH sepan que una solicitud específica (e.g., un permiso sin goce de sueldo) requiere un ajuste en la nómina.
-- **Auditoría**: Todas las fechas (`request_date`, `approval_date`) y IDs (`user_id`, `approver_id`) permiten una auditoría completa de cada solicitud.
+#### Tabla: `permisos` (9 campos)
+
+| Campo              | Tipo        | Key | Descripción                                  |
+| ------------------ | ----------- | --- | -------------------------------------------- |
+| permiso_id         | varchar(50) | PRI | ID de permiso                                |
+| numero_empleado    | varchar(15) | MUL | Relación RH                                  |
+| categoria          | enum        |     | PERSONAL / MEDICO / OFICIAL / OTRO           |
+| estatus            | enum        |     | pendiente / aprobado / rechazado / cancelado |
+| fecha_inicio       | date        |     | Fecha                                        |
+| horario_especifico | varchar(50) |     | Rango horario                                |
+| motivo             | text        |     | Razón                                        |
+| con_goce_sueldo    | tinyint(1)  |     | 0 / 1                                        |
+| afecta_nomina      | tinyint(1)  |     | Impacto                                      |
+
+---
+
+### 2.2 Base de Datos: `vanity_attendance`
+
+#### Tabla: `asistencia_registros` (9 campos)
+
+| Campo             | Tipo        | Key | Descripción    |
+| ----------------- | ----------- | --- | -------------- |
+| id_asistencia     | int         | PRI | Auto-increment |
+| numero_empleado   | varchar(15) | MUL | Relación RH    |
+| fecha             | date        |     | Día            |
+| hora_entrada_real | time        |     | Entrada        |
+| hora_salida_real  | time        |     | Salida         |
+| minutos_retraso   | int         |     | Calculado      |
+| minutos_extra     | int         |     | Excedente      |
+| sucursal_registro | varchar(50) |     | Sucursal       |
+| telegram_id_usado | bigint      |     | ID Telegram    |
+
+---
+
+#### Tabla: `horario_empleadas` (Diccionario de turnos)
+
+| Campo                | Tipo        | Key | Descripción      |
+| -------------------- | ----------- | --- | ---------------- |
+| id_horario           | int         | PRI | ID               |
+| numero_empleado      | varchar(15) | MUL | Relación RH      |
+| telegram_id          | bigint      |     | Llave webhook    |
+| dia_semana           | varchar(20) |     | monday, tuesday… |
+| hora_entrada_teorica | time        |     | Entrada          |
+| hora_salida_teorica  | time        |     | Salida           |
+
+---
+
+### 2.3 Base de Datos: `USERS_ALMA`
+
+#### Tabla: `users` (10 campos)
+
+| Campo       | Tipo         | Key | Descripción            |
+| ----------- | ------------ | --- | ---------------------- |
+| id          | int          | PRI | ID interno             |
+| username    | varchar(50)  | UNI | Usuario                |
+| role        | enum         |     | admin / manager / user |
+| first_name  | varchar(100) |     | Nombre                 |
+| last_name   | varchar(100) |     | Apellidos              |
+| email       | varchar(100) | UNI | Correo                 |
+| cell_phone  | varchar(20)  |     | Teléfono               |
+| telegram_id | varchar(50)  | UNI | Auth bot               |
+| created_at  | timestamp    |     | Creación               |
+| updated_at  | timestamp    |     | Actualización          |
+
+---
+
+## 3. Reglas de Negocio
+
+### 3.1 Vacaciones
+
+* **Antigüedad**: `FLOOR(DATEDIFF(fecha_inicio, fecha_ingreso) / 365.25)`
+* **Ventana**: mínimo 12 días, máximo 45 días de anticipación
+* **Validación**: no se permite solicitar periodos no cumplidos
+
+### 3.2 Asistencia
+
+* Identificación por `telegram_id`
+* Cruce con `horario_empleadas` según día
+* Cálculo de retraso contra horario teórico
+
+---
+
+## 4. Integración Webhook (Horarios)
+
+* **Identificación**: `body.telegram.user_id`
+* **Operación**: Upsert por día
+* **Formato**: conversión de `10:00 AM` → `10:00:00`
+
+---
+
+## 5. Consultas Operativas
+
+```sql
+-- Saldo actual de vacaciones
+SELECT * FROM vanity_hr.vista_saldos_vacaciones
+WHERE numero_empleado = ?;
+
+-- Última solicitud
+SELECT * FROM vanity_hr.vacaciones
+WHERE numero_empleado = ?
+ORDER BY fecha_solicitud DESC
+LIMIT 1;
+
+-- Horario del día
+SELECT hora_entrada_teorica
+FROM vanity_attendance.horario_empleadas
+WHERE telegram_id = ? AND dia_semana = 'monday';
+```
+
+---
+
+Este documento define el **contrato técnico** del sistema Vanity. Cualquier cambio estructural debe reflejarse aquí antes de pasar a producción.
+
+---
+
+# DB Implementation Tasks
+
+1.  **Create initialization script:** Write a SQL script to create the databases and tables.
+2.  **Modify `docker-compose.yml`:** Mount the initialization script.
+3.  **Update `.env.example`:** Add new environment variables.
+4.  **Implement SQLAlchemy models:** Create Python classes for each table.
+5.  **Refactor database logic:** Use the new models in the application.
+
