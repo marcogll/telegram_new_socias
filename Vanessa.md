@@ -58,7 +58,6 @@ Arquitectura **modular y desacoplada**:
     ├── __init__.py
     ├── onboarding.py     # /welcome — Contrato (35 pasos)
     ├── rh_requests.py    # /vacaciones y /permiso (IA)
-    └── printer.py        # /print — Envío de archivos
 ```
 
 ---
@@ -192,19 +191,6 @@ Vanessa: Categoría detectada → EMERGENCIA 🚨
   "created_at": "2025-12-14T10:10:00-06:00"
 }
 ```
-
----
-
-### 4️⃣ Impresión — `/print`
-
-**Objetivo**
-Enviar documentos directamente a la cola de impresión de la oficina.
-
-**Soporta**
-
-* PDF
-* Word
-* Imágenes
 
 ---
 
