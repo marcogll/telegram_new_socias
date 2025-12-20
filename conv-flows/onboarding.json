@@ -1,0 +1,235 @@
+{
+  "flow_name": "onboarding",
+  "steps": [
+    {
+      "state": 0,
+      "variable": "NOMBRE_SALUDO",
+      "question": "Para empezar con el pie derecho, ¿cómo te gusta que te llamemos?",
+      "type": "text"
+    },
+    {
+      "state": 1,
+      "variable": "NOMBRE_COMPLETO",
+      "question": "¡Lindo nombre! ✨\n\nNecesito tus datos oficiales para el contrato.\n¿Cuáles son tus *nombres* (sin apellidos) tal cual aparecen en tu INE?",
+      "type": "text"
+    },
+    {
+      "state": 2,
+      "variable": "APELLIDO_PATERNO",
+      "question": "¿Cuál es tu *apellido paterno*?",
+      "type": "text"
+    },
+    {
+      "state": 3,
+      "variable": "APELLIDO_MATERNO",
+      "question": "¿Y tu *apellido materno*?",
+      "type": "text"
+    },
+    {
+      "state": 4,
+      "variable": "CUMPLE_DIA",
+      "question": "🎂 Hablemos de ti. ¿Qué *día* es tu cumpleaños? (Escribe el número, ej: 13)",
+      "type": "text"
+    },
+    {
+      "state": 5,
+      "variable": "CUMPLE_MES",
+      "question": "¿De qué *mes*? 🎉",
+      "type": "keyboard",
+      "options": [
+        "Enero", "Febrero", "Marzo",
+        "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre",
+        "Octubre", "Noviembre", "Diciembre"
+      ]
+    },
+    {
+      "state": 6,
+      "variable": "CUMPLE_ANIO",
+      "question": "Entendido. ¿Y de qué *año*? 🗓️",
+      "type": "text"
+    },
+    {
+      "state": 7,
+      "variable": "ESTADO_NACIMIENTO",
+      "question": "🇲🇽 ¿En qué *estado de la república* naciste?",
+      "type": "text"
+    },
+    {
+      "state": 8,
+      "variable": "RFC",
+      "question": "Pasemos a lo administrativo 📄.\n\nPor favor escribe tu *RFC* (Sin espacios):",
+      "type": "text"
+    },
+    {
+      "state": 9,
+      "variable": "CURP",
+      "question": "Gracias. Ahora tu *CURP*:",
+      "type": "text"
+    },
+    {
+      "state": 10,
+      "variable": "CORREO",
+      "question": "¡Súper! 📧 ¿A qué *correo electrónico* te enviamos la info?",
+      "type": "text"
+    },
+    {
+      "state": 11,
+      "variable": "CELULAR",
+      "question": "📱 ¿Cuál es tu número de *celular* personal? (10 dígitos)",
+      "type": "text"
+    },
+    {
+      "state": 12,
+      "variable": "CALLE",
+      "question": "🏠 Registremos tu domicilio.\n\n¿En qué *calle* vives?",
+      "type": "text"
+    },
+    {
+      "state": 13,
+      "variable": "NUM_EXTERIOR",
+      "question": "#️⃣ ¿Cuál es el *número exterior*?",
+      "type": "text"
+    },
+    {
+      "state": 14,
+      "variable": "NUM_INTERIOR",
+      "question": "🚪 ¿Tienes *número interior*? (Escribe 0 si no aplica)",
+      "type": "text"
+    },
+    {
+      "state": 15,
+      "variable": "COLONIA",
+      "question": "🏘️ ¿Cómo se llama la *colonia*?",
+      "type": "text"
+    },
+    {
+      "state": 16,
+      "variable": "CODIGO_POSTAL",
+      "question": "📮 ¿Cuál es el *Código Postal*?",
+      "type": "text"
+    },
+    {
+      "state": 17,
+      "variable": "CIUDAD_RESIDENCIA",
+      "question": "¿En qué *ciudad* resides actualmente?",
+      "type": "keyboard",
+      "options": ["Saltillo", "Ramos Arizpe", "Arteaga"]
+    },
+    {
+      "state": 18,
+      "variable": "ROL",
+      "question": "🔎 *Rol dentro del equipo*\nElige la opción que mejor describa tu posición:\n• *Belleza* — servicios de estética y spa\n• *Staff (Recepción)* — agenda y atención a clientes\n• *Marketing* — contenido, promos y comunidad\n\n_Toca un botón o escribe la opción:_",
+      "type": "keyboard",
+      "options": ["Belleza", "Staff (Recepción)", "Marketing"]
+    },
+    {
+      "state": 19,
+      "variable": "SUCURSAL",
+      "question": "¿A qué *sucursal* te vas a integrar? 📍",
+      "type": "keyboard",
+      "options": ["Plaza Cima (Sur) ⛰️", "Plaza O (Carranza) 🏙️"]
+    },
+    {
+      "state": 20,
+      "variable": "INICIO_DIA",
+      "question": "¡Qué emoción! 🎉\n\n¿Qué *día* está programado tu ingreso? (Solo el número, ej: 01)",
+      "type": "text"
+    },
+    {
+      "state": 21,
+      "variable": "INICIO_MES",
+      "question": "¿De qué *mes* será tu ingreso?",
+      "type": "keyboard",
+      "options": [
+        "Enero", "Febrero", "Marzo",
+        "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre",
+        "Octubre", "Noviembre", "Diciembre"
+      ]
+    },
+    {
+      "state": 22,
+      "variable": "INICIO_ANIO",
+      "question": "¿Y de qué *año*?",
+      "type": "keyboard",
+      "options": ["2020", "2021", "2022", "2023", "2024", "2025", "2026"]
+    },
+    {
+      "state": 23,
+      "variable": "REF1_NOMBRE",
+      "question": "Ya casi acabamos. Necesito 3 referencias.\n\n👤 *Referencia 1*: Nombre completo",
+      "type": "text"
+    },
+    {
+      "state": 24,
+      "variable": "REF1_TELEFONO",
+      "question": "📞 Teléfono de la Referencia 1:",
+      "type": "text"
+    },
+    {
+      "state": 25,
+      "variable": "REF1_TIPO",
+      "question": "🧑‍🤝‍🧑 ¿Qué relación tienes con ella/él?",
+      "type": "keyboard",
+      "options": ["Familiar", "Amistad", "Trabajo", "Académica", "Otra"]
+    },
+    {
+      "state": 26,
+      "variable": "REF2_NOMBRE",
+      "question": "Ok. Vamos con la *Referencia 2*.\n\n👤 Nombre completo:",
+      "type": "text"
+    },
+    {
+      "state": 27,
+      "variable": "REF2_TELEFONO",
+      "question": "📞 Teléfono de la Referencia 2:",
+      "type": "text"
+    },
+    {
+      "state": 28,
+      "variable": "REF2_TIPO",
+      "question": "🧑‍🤝‍🧑 ¿Qué relación tienen?",
+      "type": "keyboard",
+      "options": ["Familiar", "Amistad", "Trabajo", "Académica", "Otra"]
+    },
+    {
+      "state": 29,
+      "variable": "REF3_NOMBRE",
+      "question": "Última. *Referencia 3*.\n\n👤 Nombre completo:",
+      "type": "text"
+    },
+    {
+      "state": 30,
+      "variable": "REF3_TELEFONO",
+      "question": "📞 Teléfono de la Referencia 3:",
+      "type": "text"
+    },
+    {
+      "state": 31,
+      "variable": "REF3_TIPO",
+      "question": "🧑‍🤝‍🧑 ¿Qué relación tienen?",
+      "type": "keyboard",
+      "options": ["Familiar", "Amistad", "Trabajo", "Académica", "Otra"]
+    },
+    {
+      "state": 32,
+      "variable": "EMERGENCIA_NOMBRE",
+      "question": "Finalmente, por seguridad 🚑:\n\n¿A quién llamamos en caso de *emergencia*?",
+      "type": "text"
+    },
+    {
+      "state": 33,
+      "variable": "EMERGENCIA_TEL",
+      "question": "☎️ ¿Cuál es el teléfono de esa persona?",
+      "type": "text"
+    },
+    {
+      "state": 34,
+      "variable": "EMERGENCIA_RELACION",
+      "question": "¿Qué parentesco tiene contigo?",
+      "type": "keyboard",
+      "options": ["Padre/Madre", "Esposo/a", "Hijo/a", "Hermano/a", "Amigo/a", "Otro"]
+    }
+  ]
+}

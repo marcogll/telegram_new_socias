@@ -1,0 +1,61 @@
+{
+  "flow_name": "vacations",
+  "steps": [
+    {
+      "state": "INICIO_DIA",
+      "question": "🌴 **Solicitud de Vacaciones**\n\nVamos a registrar tu descanso. ¿Qué *día* inicia? (número, ej: 10)",
+      "handler": "recibir_inicio_dia",
+      "type": "text"
+    },
+    {
+      "state": "INICIO_MES",
+      "question": "¿De qué *mes* inicia?",
+      "handler": "recibir_inicio_mes",
+      "type": "keyboard",
+      "options": [
+        "Enero", "Febrero", "Marzo",
+        "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre",
+        "Octubre", "Noviembre", "Diciembre"
+      ]
+    },
+    {
+      "state": "INICIO_ANIO",
+      "question": "¿De qué *año* inicia?",
+      "handler": "recibir_inicio_anio",
+      "type": "keyboard",
+      "options": ["current_year", "next_year"]
+    },
+    {
+      "state": "FIN_DIA",
+      "question": "¿Qué *día* termina tu descanso?",
+      "handler": "recibir_fin_dia",
+      "type": "text"
+    },
+    {
+      "state": "FIN_MES",
+      "question": "¿De qué *mes* termina?",
+      "handler": "recibir_fin_mes",
+      "type": "keyboard",
+      "options": [
+        "Enero", "Febrero", "Marzo",
+        "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre",
+        "Octubre", "Noviembre", "Diciembre"
+      ]
+    },
+    {
+      "state": "FIN_ANIO",
+      "question": "¿De qué *año* termina tu descanso?",
+      "handler": "recibir_fin_anio",
+      "type": "keyboard",
+      "options": ["current_year", "next_year"]
+    },
+    {
+      "state": "MOTIVO",
+      "question": "Entendido. ¿Cuál es el motivo o comentario adicional?",
+      "handler": "recibir_motivo_fin",
+      "type": "text"
+    }
+  ]
+}

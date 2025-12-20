@@ -1,0 +1,83 @@
+{
+  "flow_name": "leave_request",
+  "steps": [
+    {
+      "state": "PERMISO_CUANDO",
+      "question": "⏱️ **Solicitud de Permiso**\n\n¿Para cuándo lo necesitas?",
+      "handler": "recibir_cuando_permiso",
+      "type": "keyboard",
+      "options": ["Hoy", "Mañana", "Pasado mañana", "Fecha específica"],
+      "next_step": [
+        {
+          "condition": "response in ['Hoy', 'Mañana', 'Pasado mañana']",
+          "state": "HORARIO"
+        },
+        {
+          "condition": "response == 'Fecha específica'",
+          "state": "PERMISO_ANIO"
+        }
+      ]
+    },
+    {
+      "state": "PERMISO_ANIO",
+      "question": "¿Para qué año es el permiso? (elige el actual o el siguiente)",
+      "handler": "recibir_anio_permiso",
+      "type": "keyboard",
+      "options": ["current_year", "next_year"],
+      "next_step": "INICIO_DIA"
+    },
+    {
+      "state": "INICIO_DIA",
+      "question": "¿En qué *día* inicia el permiso? (número, ej: 12)",
+      "handler": "recibir_inicio_dia",
+      "type": "text",
+      "next_step": "INICIO_MES"
+    },
+    {
+      "state": "INICIO_MES",
+      "question": "¿De qué *mes* inicia?",
+      "handler": "recibir_inicio_mes",
+      "type": "keyboard",
+      "options": [
+        "Enero", "Febrero", "Marzo",
+        "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre",
+        "Octubre", "Noviembre", "Diciembre"
+      ],
+      "next_step": "FIN_DIA"
+    },
+    {
+      "state": "FIN_DIA",
+      "question": "¿Qué *día* termina?",
+      "handler": "recibir_fin_dia",
+      "type": "text",
+      "next_step": "FIN_MES"
+    },
+    {
+      "state": "FIN_MES",
+      "question": "¿De qué *mes* termina?",
+      "handler": "recibir_fin_mes",
+      "type": "keyboard",
+      "options": [
+        "Enero", "Febrero", "Marzo",
+        "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre",
+        "Octubre", "Noviembre", "Diciembre"
+      ],
+      "next_step": "HORARIO"
+    },
+    {
+      "state": "HORARIO",
+      "question": "¿Cuál es el horario? Ej: `09:00-11:00` o `Todo el día`.",
+      "handler": "recibir_horario",
+      "type": "text",
+      "next_step": "MOTIVO"
+    },
+    {
+      "state": "MOTIVO",
+      "question": "Entendido. ¿Cuál es el motivo o comentario adicional?",
+      "handler": "recibir_motivo_fin",
+      "type": "text"
+    }
+  ]
+}
