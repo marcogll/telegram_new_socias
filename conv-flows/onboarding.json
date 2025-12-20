@@ -229,7 +229,7 @@
       "variable": "EMERGENCIA_RELACION",
       "question": "¿Qué parentesco tiene contigo?",
       "type": "keyboard",
-      "options": ["Padre/Madre", "Esposo/a", "Hijo/a", "Hermano/a", "Amigo/a", "Otro"]
+      "options": ["Padre/Madre", "Esposo/a","Pareja", "Hijo/a", "Hermano/a", "Amigo/a", "Otro"]
     }
   ]
 }
