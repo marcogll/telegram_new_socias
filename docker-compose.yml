@@ -3,6 +3,7 @@ version: "3.8"
 services:
   bot:
     build: .
+    image: marcogll/vanessa-bot:1.8
     container_name: vanessa_bot
     restart: always
     env_file:

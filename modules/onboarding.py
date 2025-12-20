@@ -406,16 +406,15 @@ async def finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     # --- REGISTRO EN BASE DE DATOS ---
     db_ok = register_user({
-        **meta,
-        **payload["metadata"],
-        **payload["candidato"],
-        **payload["contacto"]
+        "meta": meta,
+        **payload
     })
     
+    chat_id_log = payload.get("metadata", {}).get("chat_id", meta.get("telegram_id"))
     if db_ok:
-        logging.info(f"Usuario {meta['chat_id']} registrado en la base de datos.")
+        logging.info(f"Usuario {chat_id_log} registrado en la base de datos.")
     else:
-        logging.error(f"Fallo al registrar usuario {meta['chat_id']} en la base de datos.")
+        logging.error(f"Fallo al registrar usuario {chat_id_log} en la base de datos.")
 
     if enviado:
         await update.message.reply_text(

@@ -1,0 +1,28 @@
+#!/bin/bash
+set -euo pipefail
+
+: "${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}"
+
+APP_USER="${MYSQL_USER:-user}"
+APP_PASSWORD="${MYSQL_PASSWORD:-password}"
+
+escape_sql() {
+    printf "%s" "$1" | sed "s/'/''/g"
+}
+
+DB_USER_ESCAPED=$(escape_sql "$APP_USER")
+DB_PASS_ESCAPED=$(escape_sql "$APP_PASSWORD")
+
+mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" <<-EOSQL
+CREATE DATABASE IF NOT EXISTS USERS_ALMA;
+CREATE DATABASE IF NOT EXISTS vanity_hr;
+CREATE DATABASE IF NOT EXISTS vanity_attendance;
+
+CREATE USER IF NOT EXISTS '${DB_USER_ESCAPED}'@'%';
+ALTER USER '${DB_USER_ESCAPED}'@'%' IDENTIFIED WITH mysql_native_password BY '${DB_PASS_ESCAPED}';
+
+GRANT ALL PRIVILEGES ON USERS_ALMA.* TO '${DB_USER_ESCAPED}'@'%';
+GRANT ALL PRIVILEGES ON vanity_hr.* TO '${DB_USER_ESCAPED}'@'%';
+GRANT ALL PRIVILEGES ON vanity_attendance.* TO '${DB_USER_ESCAPED}'@'%';
+FLUSH PRIVILEGES;
+EOSQL
