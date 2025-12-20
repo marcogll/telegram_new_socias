@@ -130,3 +130,22 @@ CREATE TABLE IF NOT EXISTS horario_empleadas (
     hora_salida_teorica TIME,
     FOREIGN KEY (numero_empleado) REFERENCES vanity_hr.data_empleadas(numero_empleado)
 );
+
+CREATE TABLE IF NOT EXISTS horarios_configurados (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    telegram_id BIGINT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    short_name VARCHAR(100),
+    monday_in TIME,
+    monday_out TIME,
+    tuesday_in TIME,
+    tuesday_out TIME,
+    wednesday_in TIME,
+    wednesday_out TIME,
+    thursday_in TIME,
+    thursday_out TIME,
+    friday_in TIME,
+    friday_out TIME,
+    saturday_in TIME,
+    saturday_out TIME
+);

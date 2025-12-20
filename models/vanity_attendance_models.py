@@ -30,3 +30,24 @@ class HorarioEmpleadas(Base):
     hora_entrada_teorica = Column(Time)
     hora_salida_teorica = Column(Time)
     empleada = relationship("DataEmpleadas", backref="horario_empleadas")
+
+class HorariosConfigurados(Base):
+    __tablename__ = 'horarios_configurados'
+    __table_args__ = {'schema': 'vanity_attendance'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    telegram_id = Column(BigInteger, nullable=False)
+    timestamp = Column(Time)
+    short_name = Column(String(100))
+    monday_in = Column(Time)
+    monday_out = Column(Time)
+    tuesday_in = Column(Time)
+    tuesday_out = Column(Time)
+    wednesday_in = Column(Time)
+    wednesday_out = Column(Time)
+    thursday_in = Column(Time)
+    thursday_out = Column(Time)
+    friday_in = Column(Time)
+    friday_out = Column(Time)
+    saturday_in = Column(Time)
+    saturday_out = Column(Time)
