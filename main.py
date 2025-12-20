@@ -89,6 +89,7 @@ async def post_init(application: Application):
     await application.bot.set_my_commands([
         BotCommand("start", "Mostrar menú principal"),
         # BotCommand("welcome", "Registro de nuevas empleadas"), # Se maneja dinámicamente
+        BotCommand("horario", "Definir horario de trabajo"),
         BotCommand("vacaciones", "Solicitar vacaciones"),
         BotCommand("permiso", "Solicitar permiso por horas"),
         BotCommand("links", "Links útiles"),
