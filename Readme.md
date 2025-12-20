@@ -10,7 +10,9 @@ Este repositorio está pensado como **proyecto Python profesional**, modular y l
 
 Vanessa no es un chatbot genérico: es una interfaz conversacional para procesos reales de negocio.
 
-- **Onboarding completo de nuevas socias (`/welcome`)**: Recolecta datos, valida que no existan duplicados en la DB, registra a la usuaria en `USERS_ALMA` y envía los datos a n8n.
+- **Onboarding completo de nuevas socias (`/welcome`)**: Recolecta datos, valida que no existan duplicados en la DB, y ejecuta un registro en dos fases:
+  1.  **Crea un usuario de acceso** en la tabla `USERS_ALMA.users` para la autenticación del bot.
+  2.  **Crea un perfil de empleada** completo en la tabla `vanity_hr.data_empleadas`, que es la tabla maestra de RRHH.
 - **Solicitud de vacaciones (`/vacaciones`)**: Flujo dinámico para gestionar días de descanso.
 - **Solicitud de permisos por horas (`/permiso`)**: Incluye clasificación de motivos mediante IA (Gemini).
 
@@ -100,8 +102,10 @@ Este comando levantará el bot y un contenedor de MySQL (si se usa el compose po
 
 ### modules/database.py
 - Centraliza la conexión a las 3 bases de datos (`USERS_ALMA`, `vanity_hr`, `vanity_attendance`).
-- **Verificación de duplicados**: Ya no usa Google Sheets; ahora verifica el `telegram_id` directamente en la tabla `users`.
-- **Registro de usuarias**: Función `register_user` para insertar candidatas tras el onboarding.
+- **Verificación de duplicados**: Verifica el `telegram_id` en `USERS_ALMA.users` para evitar registros duplicados.
+- **Registro de usuarias**: La función `register_user` implementa un registro en dos pasos:
+  1.  Crea o actualiza el registro en `USERS_ALMA.users` para control de acceso.
+  2.  Crea o actualiza el perfil completo de la empleada en `vanity_hr.data_empleadas`.
 
 ### modules/onboarding.py
 Recolección exhaustiva de datos. Al finalizar:

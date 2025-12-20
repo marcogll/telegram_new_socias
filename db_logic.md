@@ -206,3 +206,13 @@ WHERE telegram_id = ? AND dia_semana = 'monday';
 ---
 
 Este documento define el **contrato técnico** del sistema Vanity. Cualquier cambio estructural debe reflejarse aquí antes de pasar a producción.
+
+---
+
+# DB Implementation Tasks
+
+1.  **Create initialization script:** Write a SQL script to create the databases and tables.
+2.  **Modify `docker-compose.yml`:** Mount the initialization script.
+3.  **Update `.env.example`:** Add new environment variables.
+4.  **Implement SQLAlchemy models:** Create Python classes for each table.
+5.  **Refactor database logic:** Use the new models in the application.
