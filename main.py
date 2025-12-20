@@ -16,17 +16,18 @@ from telegram.constants import ParseMode
 from telegram.ext import Application, Defaults, CommandHandler, ContextTypes
 
 # --- IMPORTAR HABILIDADES ---
-from modules.onboarding import onboarding_handler
-from modules.rh_requests import vacaciones_handler, permiso_handler
+from modules.flow_builder import load_flows
 from modules.logger import log_request
 from modules.database import chat_id_exists # Importar chat_id_exists
 from modules.ui import main_actions_keyboard
 # from modules.finder import finder_handler (Si lo creas después)
 
-LINK_CURSOS = "https://cursos.vanityexperience.mx/dashboard-2/"
-LINK_SITIO = "https://vanityexperience.mx/"
-LINK_AGENDA_IOS = "https://apps.apple.com/us/app/fresha-for-business/id1455346253"
-LINK_AGENDA_ANDROID = "https://play.google.com/store/apps/details?id=com.fresha.Business"
+# Cargar links desde variables de entorno
+LINK_CURSOS = os.getenv("LINK_CURSOS", "https://cursos.vanityexperience.mx/dashboard-2/")
+LINK_SITIO = os.getenv("LINK_SITIO", "https://vanityexperience.mx/")
+LINK_AGENDA_IOS = os.getenv("LINK_AGENDA_IOS", "https://apps.apple.com/us/app/fresha-for-business/id1455346253")
+LINK_AGENDA_ANDROID = os.getenv("LINK_AGENDA_ANDROID", "https://play.google.com/store/apps/details?id=com.fresha.Business")
+
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 
@@ -112,9 +113,10 @@ def main():
     app.add_handler(CommandHandler("help", menu_principal))
 
     # 2. Habilidades Complejas (Conversaciones)
-    app.add_handler(onboarding_handler)
-    app.add_handler(vacaciones_handler)
-    app.add_handler(permiso_handler)
+    flow_handlers = load_flows()
+    for handler in flow_handlers:
+        app.add_handler(handler)
+        
     app.add_handler(CommandHandler("links", links_menu))
     # app.add_handler(finder_handler)
 
