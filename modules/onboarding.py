@@ -434,7 +434,7 @@ async def finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
-        "Proceso cancelado. ⏸️\nPuedes retomarlo con /welcome o ir al menú con /start.",
+        "Proceso cancelado. ⏸️\nPuedes retomarlo con /registro (alias /welcome) o ir al menú con /start.",
         reply_markup=main_actions_keyboard()
     )
     context.user_data.clear()
@@ -450,8 +450,11 @@ states[34] = [MessageHandler(filters.TEXT & ~filters.COMMAND, finalizar)]
 
 # Handler listo para importar en main.py
 onboarding_handler = ConversationHandler(
-    entry_points=[CommandHandler("welcome", start)], # Cambiado a /welcome
-    states=states, # Tu diccionario de estados
+    entry_points=[
+        CommandHandler("welcome", start),
+        CommandHandler("registro", start),
+    ],
+    states=states,
     fallbacks=[CommandHandler("cancelar", cancelar)],
     allow_reentry=True
 )

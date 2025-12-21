@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Enum, TIMESTAMP, Date, Text, BigInteger, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Enum, TIMESTAMP, Date, Text, BigInteger, DateTime, Time
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
@@ -90,3 +90,15 @@ class Permisos(Base):
     con_goce_sueldo = Column(TINYINT)
     afecta_nomina = Column(TINYINT)
     empleada = relationship("DataEmpleadas")
+
+class HorarioEmpleadas(Base):
+    __tablename__ = 'horario_empleadas'
+    __table_args__ = {'schema': 'vanity_hr'}
+
+    id_horario = Column(Integer, primary_key=True, autoincrement=True)
+    numero_empleado = Column(String(15), ForeignKey('vanity_hr.data_empleadas.numero_empleado'))
+    telegram_id = Column(BigInteger)
+    dia_semana = Column(String(20))
+    hora_entrada_teorica = Column(Time)
+    hora_salida_teorica = Column(Time)
+    empleada = relationship("DataEmpleadas", backref="horarios_registrados")

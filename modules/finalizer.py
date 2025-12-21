@@ -2,10 +2,10 @@ import os
 import json
 import logging
 import requests
-from datetime import datetime
-from sqlalchemy.orm import sessionmaker
-from modules.database import get_engine
-from models.vanity_attendance_models import HorariosConfigurados
+from datetime import datetime, time as time_cls
+
+from modules.database import SessionVanityHr
+from models.vanity_hr_models import HorarioEmpleadas, DataEmpleadas
 
 def _send_webhook(url: str, payload: dict):
     """Sends a POST request to a webhook."""
@@ -39,51 +39,88 @@ def _finalize_horario(telegram_id: int, data: dict):
     """Finalizes the 'horario' flow."""
     logging.info(f"Finalizing 'horario' flow for telegram_id: {telegram_id}")
 
-    # 1. Prepare data
+    # 1. Prepare data for webhook and DB
+    day_pairs = [
+        ("monday", "MONDAY_IN", "MONDAY_OUT"),
+        ("tuesday", "TUESDAY_IN", "TUESDAY_OUT"),
+        ("wednesday", "WEDNESDAY_IN", "WEDNESDAY_OUT"),
+        ("thursday", "THURSDAY_IN", "THURSDAY_OUT"),
+        ("friday", "FRIDAY_IN", "FRIDAY_OUT"),
+        ("saturday", "SATURDAY_IN", None),
+    ]
+
     schedule_data = {
         "telegram_id": telegram_id,
         "short_name": data.get("SHORT_NAME"),
-        "monday_in": _convert_to_time(data.get("MONDAY_IN")),
-        "monday_out": _convert_to_time(data.get("MONDAY_OUT")),
-        "tuesday_in": _convert_to_time(data.get("TUESDAY_IN")),
-        "tuesday_out": _convert_to_time(data.get("TUESDAY_OUT")),
-        "wednesday_in": _convert_to_time(data.get("WEDNESDAY_IN")),
-        "wednesday_out": _convert_to_time(data.get("WEDNESDAY_OUT")),
-        "thursday_in": _convert_to_time(data.get("THURSDAY_IN")),
-        "thursday_out": _convert_to_time(data.get("THURSDAY_OUT")),
-        "friday_in": _convert_to_time(data.get("FRIDAY_IN")),
-        "friday_out": _convert_to_time(data.get("FRIDAY_OUT")),
-        "saturday_in": _convert_to_time(data.get("SATURDAY_IN")),
-        "saturday_out": _convert_to_time("6:00 PM"), # Hardcoded as per flow
     }
+
+    rows_for_db = []
+    for day_key, in_key, out_key in day_pairs:
+        entrada = _convert_to_time(data.get(in_key))
+        salida_raw = data.get(out_key) if out_key else "6:00 PM"
+        salida = _convert_to_time(salida_raw)
+
+        schedule_data[f"{day_key}_in"] = entrada
+        schedule_data[f"{day_key}_out"] = salida
+
+        if not entrada or not salida:
+            logging.warning(f"Missing schedule data for {day_key}. Entrada: {entrada}, Salida: {salida}")
+            continue
+
+        rows_for_db.append(
+            {
+                "dia_semana": day_key,
+                "hora_entrada": entrada,
+                "hora_salida": salida,
+            }
+        )
 
     # 2. Send to webhook
     webhook_url = os.getenv("WEBHOOK_SCHEDULE")
     if webhook_url:
-        # Create a JSON-serializable payload
-        json_payload = {k: (v.isoformat() if isinstance(v, datetime.time) else v) for k, v in schedule_data.items()}
+        json_payload = {
+            k: (v.isoformat() if isinstance(v, time_cls) else v) for k, v in schedule_data.items()
+        }
         json_payload["timestamp"] = datetime.now().isoformat()
         _send_webhook(webhook_url, json_payload)
 
-    # 3. Save to database
-    engine = get_engine()
-    Session = sessionmaker(bind=engine)
-    session = Session()
+    # 3. Save to database (vanity_hr.horario_empleadas)
+    if not SessionVanityHr:
+        logging.error("SessionVanityHr is not initialized. Cannot persist horarios.")
+        return False
+
+    session = SessionVanityHr()
     try:
-        # Upsert logic: Check if a record for this telegram_id already exists
-        existing_schedule = session.query(HorariosConfigurados).filter_by(telegram_id=telegram_id).first()
-        if existing_schedule:
-            # Update existing record
-            for key, value in schedule_data.items():
-                setattr(existing_schedule, key, value)
-            existing_schedule.timestamp = datetime.now()
-            logging.info(f"Updating existing schedule for telegram_id: {telegram_id}")
-        else:
-            # Create new record
-            new_schedule = HorariosConfigurados(**schedule_data)
-            session.add(new_schedule)
-            logging.info(f"Creating new schedule for telegram_id: {telegram_id}")
-        
+        empleada = session.query(DataEmpleadas).filter(DataEmpleadas.telegram_chat_id == telegram_id).first()
+        numero_empleado = empleada.numero_empleado if empleada else None
+        if not numero_empleado:
+            logging.warning(f"No se encontró numero_empleado para telegram_id={telegram_id}. Se guardará NULL.")
+
+        existing_rows = {
+            row.dia_semana: row
+            for row in session.query(HorarioEmpleadas).filter_by(telegram_id=telegram_id).all()
+        }
+
+        for row in rows_for_db:
+            dia = row["dia_semana"]
+            entrada = row["hora_entrada"]
+            salida = row["hora_salida"]
+            existing = existing_rows.get(dia)
+            if existing:
+                existing.numero_empleado = numero_empleado or existing.numero_empleado
+                existing.hora_entrada_teorica = entrada
+                existing.hora_salida_teorica = salida
+            else:
+                session.add(
+                    HorarioEmpleadas(
+                        numero_empleado=numero_empleado,
+                        telegram_id=telegram_id,
+                        dia_semana=dia,
+                        hora_entrada_teorica=entrada,
+                        hora_salida_teorica=salida,
+                    )
+                )
+
         session.commit()
         return True
     except Exception as e:

@@ -108,6 +108,20 @@ Tabla central de Recursos Humanos. Contiene información contractual, personal, 
 | con_goce_sueldo    | tinyint(1)  |     | 0 / 1                                        |
 | afecta_nomina      | tinyint(1)  |     | Impacto                                      |
 
+
+#### Tabla: `horario_empleadas` (Diccionario de turnos)
+
+| Campo                | Tipo        | Key | Descripción      |
+| -------------------- | ----------- | --- | ---------------- |
+| id_horario           | int         | PRI | ID               |
+| numero_empleado      | varchar(15) | MUL | Relación RH      |
+| telegram_id          | bigint      |     | Llave webhook    |
+| dia_semana           | varchar(20) |     | monday, tuesday… |
+| hora_entrada_teorica | time        |     | Entrada          |
+| hora_salida_teorica  | time        |     | Salida           |
+
+*Los capturados desde `/horario` generan un registro por día mediante upsert (por `telegram_id` + `dia_semana`).*
+
 ---
 
 ### 2.2 Base de Datos: `vanity_attendance`
@@ -125,19 +139,6 @@ Tabla central de Recursos Humanos. Contiene información contractual, personal, 
 | minutos_extra     | int         |     | Excedente      |
 | sucursal_registro | varchar(50) |     | Sucursal       |
 | telegram_id_usado | bigint      |     | ID Telegram    |
-
----
-
-#### Tabla: `horario_empleadas` (Diccionario de turnos)
-
-| Campo                | Tipo        | Key | Descripción      |
-| -------------------- | ----------- | --- | ---------------- |
-| id_horario           | int         | PRI | ID               |
-| numero_empleado      | varchar(15) | MUL | Relación RH      |
-| telegram_id          | bigint      |     | Llave webhook    |
-| dia_semana           | varchar(20) |     | monday, tuesday… |
-| hora_entrada_teorica | time        |     | Entrada          |
-| hora_salida_teorica  | time        |     | Salida           |
 
 ---
 
@@ -171,7 +172,7 @@ Tabla central de Recursos Humanos. Contiene información contractual, personal, 
 ### 3.2 Asistencia
 
 * Identificación por `telegram_id`
-* Cruce con `horario_empleadas` según día
+* Cruce con `vanity_hr.horario_empleadas` según día
 * Cálculo de retraso contra horario teórico
 
 ---
@@ -180,6 +181,7 @@ Tabla central de Recursos Humanos. Contiene información contractual, personal, 
 
 * **Identificación**: `body.telegram.user_id`
 * **Operación**: Upsert por día
+* **Persistencia**: `vanity_hr.horario_empleadas` (clave `telegram_id` + `dia_semana`)
 * **Formato**: conversión de `10:00 AM` → `10:00:00`
 
 ---
@@ -199,7 +201,7 @@ LIMIT 1;
 
 -- Horario del día
 SELECT hora_entrada_teorica
-FROM vanity_attendance.horario_empleadas
+FROM vanity_hr.horario_empleadas
 WHERE telegram_id = ? AND dia_semana = 'monday';
 ```
 

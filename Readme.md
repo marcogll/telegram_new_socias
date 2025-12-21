@@ -10,11 +10,12 @@ Este repositorio está pensado como **proyecto Python profesional**, modular y l
 
 Vanessa no es un chatbot genérico: es una interfaz conversacional para procesos reales de negocio.
 
-- **Onboarding completo de nuevas socias (`/welcome`)**: Recolecta datos, valida que no existan duplicados en la DB, y ejecuta un registro en dos fases:
+- **Onboarding completo de nuevas socias (`/registro`, alias `/welcome`)**: Recolecta datos, valida que no existan duplicados en la DB, y ejecuta un registro en dos fases. **Debe completarse una vez para habilitar el resto de comandos.**
   1.  **Crea un usuario de acceso** en la tabla `USERS_ALMA.users` para la autenticación del bot.
   2.  **Crea un perfil de empleada** completo en la tabla `vanity_hr.data_empleadas`, que es la tabla maestra de RRHH.
-- **Solicitud de vacaciones (`/vacaciones`)**: Flujo dinámico para gestionar días de descanso.
-- **Solicitud de permisos por horas (`/permiso`)**: Incluye clasificación de motivos mediante IA (Gemini).
+- **Definición de horario semanal (`/horario`)**: Captura guiada día a día que termina en un upsert por día dentro de `vanity_hr.horario_empleadas` y dispara un webhook operativo; sólo se habilita si ya estás registrada.
+- **Solicitud de vacaciones (`/vacaciones`)**: Flujo dinámico para gestionar días de descanso, disponible sólo si tu `telegram_id` ya existe en la base vía `/registro`.
+- **Solicitud de permisos por horas (`/permiso`)**: Incluye clasificación de motivos mediante IA (Gemini) y requiere que el onboarding haya terminado.
 
 Cada flujo es un módulo independiente que interactúa con la base de datos y flujos de **n8n**.
 
@@ -38,11 +39,14 @@ vanity_bot/
 │   ├── vanity_hr_models.py
 │   └── vanity_attendance_models.py
 │
-└── modules/              # Habilidades del bot
+├── conv-flows/           # Plantillas JSON de flujos declarativos (p. ej. horario.json)
+└── modules/              # Habilidades del bot y utilidades
     ├── ai.py             # Clasificación de motivos con Gemini
     ├── database.py       # Conexión a DB y lógica de negocio (registro/verificación)
+    ├── finalizer.py      # Acciones finales por flujo (webhooks + persistencia)
+    ├── flow_builder.py   # Loader que convierte las plantillas JSON en ConversationHandlers
     ├── logger.py         # Registro de auditoría
-    ├── onboarding.py     # Flujo /welcome
+    ├── onboarding.py     # Flujo /registro (/welcome)
     ├── rh_requests.py    # /vacaciones y /permiso
     └── ui.py             # Teclados y componentes de interfaz
 ```
@@ -64,6 +68,7 @@ GOOGLE_API_KEY=AIzaSy...
 WEBHOOK_ONBOARDING=https://...
 WEBHOOK_VACACIONES=https://...
 WEBHOOK_PERMISOS=https://...
+WEBHOOK_SCHEDULE=https://...
 
 # --- DATABASE SETUP ---
 MYSQL_HOST=db
@@ -76,6 +81,18 @@ MYSQL_DATABASE_USERS_ALMA=USERS_ALMA
 MYSQL_DATABASE_VANITY_HR=vanity_hr
 MYSQL_DATABASE_VANITY_ATTENDANCE=vanity_attendance
 ```
+
+---
+
+## 🔄 Flujos declarativos
+
+El bot puede registrar conversaciones complejas sin código específico gracias a:
+
+- `conv-flows/*.json`: Describe cada paso del flujo (texto, teclados, variables y transiciones). Actualmente `horario.json` define `/horario`.
+- `modules/flow_builder.py`: Lee los JSON y crea dinámicamente los `ConversationHandler`.
+- `modules/finalizer.py`: Ejecuta la acción final de cada flujo. Para `/horario` convierte las horas a formato 24 h, envía `WEBHOOK_SCHEDULE` y distribuye los registros por día en `vanity_hr.horario_empleadas`.
+
+Si un flujo requiere lógica adicional, se agrega un finalizer nuevo y se anota en el map `FINALIZATION_MAP`.
 
 ---
 

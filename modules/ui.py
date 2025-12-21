@@ -5,7 +5,7 @@ def main_actions_keyboard(is_registered: bool = False) -> ReplyKeyboardMarkup:
     """Teclado inferior con comandos directos (un toque lanza el flujo)."""
     keyboard = []
     if not is_registered:
-        keyboard.append(["/welcome"])
+        keyboard.append(["/registro"])
     
     keyboard.extend([
         ["/vacaciones", "/permiso"],

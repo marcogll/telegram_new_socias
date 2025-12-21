@@ -2,114 +2,118 @@
   "flow_name": "horario",
   "steps": [
     {
-      "state": 0,
+      "state": -3,
       "variable": "INTRO_READ",
       "type": "keyboard",
-      "question": "ANTES DE DEFINIR TUS HORARIOS\n\nLee con atención:\n\n• Estos horarios se usarán para control de asistencia y reportes\n• Selecciona únicamente los botones disponibles\n• El sistema convertirá automáticamente a formato 24 hrs\n\nCuando estés listo, continúa.",
-      "options": ["Continuar"],
-      "next_step": 1
+      "question": "ANTES DE DEFINIR TUS HORARIOS\n\nLee con atención:\n\n• Estos horarios se usarán para control de asistencia y reportes\n• Selecciona únicamente los botones disponibles\n• El sistema convertirá automáticamente a formato 24 hrs\n\nCuando estés lista, confirma para continuar.",
+      "options": ["Continuar"]
+    },
+    {
+      "state": -2,
+      "variable": "INTRO_NAME",
+      "type": "info",
+      "question": "NOMBRE CORTO\n\nEste nombre se usará para mensajes internos, reportes y notificaciones."
+    },
+    {
+      "state": -1,
+      "variable": "SHORT_NAME",
+      "type": "text",
+      "question": "¿Cómo te dicen normalmente?"
+    },
+    {
+      "state": 0,
+      "variable": "INTRO_HOURS",
+      "type": "info",
+      "question": "DEFINICIÓN DE HORARIOS\n\nDefine tu horario habitual por día usando botones AM / PM."
     },
     {
       "state": 1,
-      "variable": "SHORT_NAME",
-      "type": "text",
-      "question": "¿Cómo te dicen normalmente?",
-      "next_step": 2
-    },
-    {
-      "state": 2,
       "variable": "MONDAY_IN",
       "type": "keyboard",
       "question": "Lunes · Hora de entrada",
-      "options": ["10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM"],
-      "next_step": 3
+      "options": ["10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM"]
     },
     {
-      "state": 3,
+      "state": 2,
       "variable": "MONDAY_OUT",
       "type": "keyboard",
       "question": "Lunes · Hora de salida",
-      "options": ["4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM"],
-      "next_step": 4
+      "options": ["4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM"]
     },
     {
-      "state": 4,
+      "state": 3,
       "variable": "TUESDAY_IN",
       "type": "keyboard",
       "question": "Martes · Hora de entrada",
-      "options": ["10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM"],
-      "next_step": 5
+      "options": ["10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM"]
     },
     {
-      "state": 5,
+      "state": 4,
       "variable": "TUESDAY_OUT",
       "type": "keyboard",
       "question": "Martes · Hora de salida",
-      "options": ["4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM"],
-      "next_step": 6
+      "options": ["4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM"]
     },
     {
-      "state": 6,
+      "state": 5,
       "variable": "WEDNESDAY_IN",
       "type": "keyboard",
       "question": "Miércoles · Hora de entrada",
-      "options": ["10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM"],
-      "next_step": 7
+      "options": ["10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM"]
     },
     {
-      "state": 7,
+      "state": 6,
       "variable": "WEDNESDAY_OUT",
       "type": "keyboard",
       "question": "Miércoles · Hora de salida",
-      "options": ["4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM"],
-      "next_step": 8
+      "options": ["4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM"]
     },
     {
-      "state": 8,
+      "state": 7,
       "variable": "THURSDAY_IN",
       "type": "keyboard",
       "question": "Jueves · Hora de entrada",
-      "options": ["10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM"],
-      "next_step": 9
+      "options": ["10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM"]
     },
     {
-      "state": 9,
+      "state": 8,
       "variable": "THURSDAY_OUT",
       "type": "keyboard",
       "question": "Jueves · Hora de salida",
-      "options": ["4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM"],
-      "next_step": 10
+      "options": ["4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM"]
     },
     {
-      "state": 10,
+      "state": 9,
       "variable": "FRIDAY_IN",
       "type": "keyboard",
       "question": "Viernes · Hora de entrada",
-      "options": ["10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM"],
-      "next_step": 11
+      "options": ["10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM"]
     },
     {
-      "state": 11,
+      "state": 10,
       "variable": "FRIDAY_OUT",
       "type": "keyboard",
       "question": "Viernes · Hora de salida",
-      "options": ["4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM"],
-      "next_step": 12
+      "options": ["4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM"]
     },
     {
-      "state": 12,
+      "state": 11,
       "variable": "SATURDAY_IN",
       "type": "keyboard",
       "question": "Sábado · Hora de entrada",
-      "options": ["10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM"],
-      "next_step": 13
+      "options": ["10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM"]
     },
     {
-      "state": 13,
+      "state": 12,
       "variable": "SATURDAY_OUT",
       "type": "info",
-      "question": "Sábado · Hora de salida\n\nLa salida del sábado queda registrada automáticamente a las 6:00 PM.",
-      "next_step": -1
+      "question": "Sábado · Hora de salida\n\nLa salida del sábado queda registrada automáticamente a las 6:00 PM."
+    },
+    {
+      "state": 99,
+      "variable": "FLOW_END",
+      "type": "info",
+      "question": "HORARIOS REGISTRADOS\n\nTus horarios quedaron guardados correctamente. Si necesitas un ajuste, notifícalo a administración."
     }
   ]
 }

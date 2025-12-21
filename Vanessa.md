@@ -56,7 +56,7 @@ Arquitectura **modular y desacoplada**:
 │
 └── modules/              # HABILIDADES
     ├── __init__.py
-    ├── onboarding.py     # /welcome — Contrato (35 pasos)
+    ├── onboarding.py     # /registro (/welcome) — Contrato (35 pasos)
     ├── rh_requests.py    # /vacaciones y /permiso (IA)
 ```
 
@@ -64,7 +64,7 @@ Arquitectura **modular y desacoplada**:
 
 ## 💬 Módulos y Flujos Conversacionales
 
-### 1️⃣ Onboarding — `/welcome`
+### 1️⃣ Onboarding — `/registro` (alias `/welcome`)
 
 **Objetivo**
 Recopilar la información completa para el contrato de nuevas socias.
@@ -80,7 +80,7 @@ Recopilar la información completa para el contrato de nuevas socias.
 **Ejemplo de conversación**
 
 ```
-User: /welcome
+User: /registro
 Vanessa: ¡Hola Ana! 👋 Soy Vanessa de RH. Vamos a dejar listo tu registro.
 Vanessa: ¿Cómo te gusta que te llamemos?
 User: Anita

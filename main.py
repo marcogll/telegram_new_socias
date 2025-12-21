@@ -20,6 +20,8 @@ from modules.flow_builder import load_flows
 from modules.logger import log_request
 from modules.database import chat_id_exists # Importar chat_id_exists
 from modules.ui import main_actions_keyboard
+from modules.onboarding import onboarding_handler
+from modules.rh_requests import vacaciones_handler, permiso_handler
 # from modules.finder import finder_handler (Si lo creas después)
 
 # Cargar links desde variables de entorno
@@ -117,6 +119,10 @@ def main():
     flow_handlers = load_flows()
     for handler in flow_handlers:
         app.add_handler(handler)
+
+    app.add_handler(onboarding_handler)
+    app.add_handler(vacaciones_handler)
+    app.add_handler(permiso_handler)
         
     app.add_handler(CommandHandler("links", links_menu))
     # app.add_handler(finder_handler)

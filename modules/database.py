@@ -4,8 +4,8 @@ from datetime import datetime, date
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models.users_alma_models import Base as BaseUsersAlma, User
-from models.vanity_hr_models import Base as BaseVanityHr, DataEmpleadas, Vacaciones, Permisos
-from models.vanity_attendance_models import Base as BaseVanityAttendance, AsistenciaRegistros, HorarioEmpleadas
+from models.vanity_hr_models import Base as BaseVanityHr, DataEmpleadas, Vacaciones, Permisos, HorarioEmpleadas
+from models.vanity_attendance_models import Base as BaseVanityAttendance, AsistenciaRegistros
 
 
 # --- DATABASE (MySQL) SETUP ---
